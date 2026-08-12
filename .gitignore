@@ -24,7 +24,9 @@ desktop.ini
 *.log
 runs/
 outputs/
-results/
+# NOT results/ -- CLAUDE.md 0.2 makes results/ the canonical result store that other
+# sessions and the thesis read from, so it is tracked on purpose. Bulk/regenerable run
+# artifacts belong in runs/ or outputs/ above.
 
 # --- Large / regenerable data ---
 # Weather files and raw solar-resource data (keep a pointer in SOURCES.md instead).
