@@ -1,0 +1,40 @@
+# --- Python ---
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# --- Jupyter / editors ---
+.vscode/
+.idea/
+
+# --- OS ---
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# --- SAM / PySAM run artifacts ---
+# Generated case files, exports and logs from SAM/PySAM runs.
+*.sam
+*.zsam
+*.log
+runs/
+outputs/
+results/
+
+# --- Large / regenerable data ---
+# Weather files and raw solar-resource data (keep a pointer in SOURCES.md instead).
+*.csv.gz
+*.h5
+*.nc
+data/raw/
+data/tmy/
+
+# --- Secrets ---
+.env
+*.key
+secrets.*
