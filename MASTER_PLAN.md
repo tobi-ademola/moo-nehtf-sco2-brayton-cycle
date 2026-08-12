@@ -28,8 +28,8 @@
 1. Temperature- and concentration-dependent thermophysical models of the nano-enhanced molten-salt HTF.
 2. Integrated CSP–nano-HTF–TES–sCO₂ Brayton model + energy, exergy, hydraulic, economic assessment.
 3. Multi-objective optimization of nanoparticle concentration, particle size, and cycle operating params for: max energy efficiency, min cost, min pumping power, max TES energy density, min exergy destruction.
-4. *(Post-defense)* Pareto-optimal envelope + net benefit of nano-enhancement vs conventional salt.
-5. *(Post-defense)* Robustness of Pareto-optimal config across climates (MENA + Southern Africa).
+4. _(Post-defense)_ Pareto-optimal envelope + net benefit of nano-enhancement vs conventional salt.
+5. _(Post-defense)_ Robustness of Pareto-optimal config across climates (MENA + Southern Africa).
 
 **Sprint scope = Objectives 2 and 3 (core). Objective 1 largely reused from prior work. Objectives 4–5 are post-defense.**
 
@@ -46,7 +46,7 @@
 ```
 
 **Guaranteed deliverable:** validated model + parametric screening identifying the most impactful decision variables.
-**Stretch deliverable:** full multi-objective optimization (NSGA-II) over the pruned/full decision vector.
+**Stretch deliverable:** full multi-objective optimization (NSGA-II/NSGA-III) over the pruned/full decision vector.
 **Novelty booster (optional):** component-level exergy analysis (see §5).
 
 ---
@@ -55,18 +55,18 @@
 
 Decision vector **X = [SM, tTES, φ, dp, THTF, ṁHTF, Tt,in, PH, PR, fRC]**
 
-| # | Category | Variable | Symbol |
-|---|----------|----------|--------|
-| 1 | Solar/TES | Solar multiple | SM |
-| 2 | Solar/TES | TES duration (h) | tTES |
-| 3 | Nano-HTF | Nanoparticle concentration | φ |
-| 4 | Nano-HTF | Nanoparticle diameter | dp |
-| 5 | Nano-HTF | HTF operating temperature | THTF |
-| 6 | Nano-HTF | HTF mass flow rate | ṁHTF |
-| 7 | sCO₂ | Turbine inlet temperature | Tt,in |
-| 8 | sCO₂ | High-side pressure | PH |
-| 9 | sCO₂ | Pressure ratio | PR |
-| 10 | sCO₂ | Recompression fraction | fRC |
+| #   | Category  | Variable                   | Symbol |
+| --- | --------- | -------------------------- | ------ |
+| 1   | Solar/TES | Solar multiple             | SM     |
+| 2   | Solar/TES | TES duration (h)           | tTES   |
+| 3   | Nano-HTF  | Nanoparticle concentration | φ      |
+| 4   | Nano-HTF  | Nanoparticle diameter      | dp     |
+| 5   | Nano-HTF  | HTF operating temperature  | THTF   |
+| 6   | Nano-HTF  | HTF mass flow rate         | ṁHTF   |
+| 7   | sCO₂      | Turbine inlet temperature  | Tt,in  |
+| 8   | sCO₂      | High-side pressure         | PH     |
+| 9   | sCO₂      | Pressure ratio             | PR     |
+| 10  | sCO₂      | Recompression fraction     | fRC    |
 
 **Primary objectives:** max ηex, max ρTES; min LCOE, min Wpump, min ĖD.
 **Constraints / indicators:** ΔPHTF ≤ max; THTF ≤ salt/material limit; Wnet ≥ min; Qloss,TES, Eannual, Q̇HTF–sCO₂ reported.
@@ -85,10 +85,10 @@ Decision vector **X = [SM, tTES, φ, dp, THTF, ṁHTF, Tt,in, PH, PR, fRC]**
 
 ## 5. EXERGY DECISION (currently: LEAN KEEP, gated on one check)
 
-- The supervisor's attached paper (Atif & Al-Sulaiman 2018, *J. Energy Eng.*) is effectively an **exergy template** for this exact topology: recompression sCO₂ + two-tank molten salt + central receiver. It gives component-level exergy-destruction equations (compressor ×2, turbine, HTR, LTR, cooler, storage HX, hot/cold tanks; Eqs. 41–56).
+- The supervisor's attached paper (Atif & Al-Sulaiman 2018, _J. Energy Eng._) is effectively an **exergy template** for this exact topology: recompression sCO₂ + two-tank molten salt + central receiver. It gives component-level exergy-destruction equations (compressor ×2, turbine, HTR, LTR, cooler, storage HX, hot/cold tanks; Eqs. 41–56).
 - Therefore the **algebra is mostly transcription**, not derivation → the "too complex" risk is lower than it looks.
 - ⚠️ **THE REAL RISK:** does PySAM's sCO₂ model expose **per-state entropy** (esp. regenerator intermediate nodes 7/8/9)? If only lumped efficiencies are exposed, reconstruct states via **CoolProp** (+~1 day).
-- **Working rule:** build the model **exergy-ready** — carry **h AND s at every state point** from the start. Switch on the exergy *reporting layer* last. This keeps novelty open without gating the critical path.
+- **Working rule:** build the model **exergy-ready** — carry **h AND s at every state point** from the start. Switch on the exergy _reporting layer_ last. This keeps novelty open without gating the critical path.
 - **Fallback:** if the entropy-exposure check fails and CoolProp reconstruction eats the buffer, exclude exergy (supervisor-approved) and keep energy/hydraulic/economic.
 
 ---
@@ -108,7 +108,7 @@ Do **not** try to validate the whole integrated plant against one paper (few rep
 - Primary recommendation: **Morris elementary-effects screening** — textbook method for factor screening, cheap in model evaluations, gives ranking + interaction flag. Ideal time-to-insight tool for 10 variables.
 - If time allows: small **Sobol** variance-based sensitivity for the survivors.
 - Output: ranked impact of each of the 10 variables → justifies either pruning the decision vector or running full MOO.
-- Full MOO (stretch): **NSGA-II** (via `pymoo`) over 5 objectives. Risky to converge + validate in 33h → stretch only.
+- Full MOO (stretch): **NSGA-II/III** (via `pymoo`) over 5 objectives. Risky to converge + validate in 33h → stretch only.
 
 ---
 
@@ -116,17 +116,18 @@ Do **not** try to validate the whole integrated plant against one paper (few rep
 
 **Files that constitute the portable project (keep all in project knowledge + a synced folder):**
 
-| File | Contents | Updated by |
-|------|----------|-----------|
-| `MASTER_PLAN.md` | *this file* — single source of truth | every session, as needed |
-| `CLAUDE.md` | Claude Code operating instructions, env details, SAM/PySAM versions, run commands, gotchas | Code sessions |
-| `PROGRESS_LOG.md` | dated append-only log: what each session did, what's next | every session |
-| `SOURCES.md` | every pivotal source: citation, DOI, tool (Consensus/web), key numbers extracted | research sessions |
-| `VALIDATION.md` | validation targets, state points, % error tables | Code + research |
-| `PROPERTIES.md` | nano-HTF property correlations, coefficients, provenance (incl. MD viscosity note) | Obj1 session |
-| `DECISIONS.md` | modeling-decision debates + resolutions (exergy, salt reconciliation, etc.) | debate sessions |
+| File              | Contents                                                                                   | Updated by               |
+| ----------------- | ------------------------------------------------------------------------------------------ | ------------------------ |
+| `MASTER_PLAN.md`  | _this file_ — single source of truth                                                       | every session, as needed |
+| `CLAUDE.md`       | Claude Code operating instructions, env details, SAM/PySAM versions, run commands, gotchas | Code sessions            |
+| `PROGRESS_LOG.md` | dated append-only log: what each session did, what's next                                  | every session            |
+| `SOURCES.md`      | every pivotal source: citation, DOI, tool (Consensus/web), key numbers extracted           | research sessions        |
+| `VALIDATION.md`   | validation targets, state points, % error tables                                           | Code + research          |
+| `PROPERTIES.md`   | nano-HTF property correlations, coefficients, provenance (incl. MD viscosity note)         | Obj1 session             |
+| `DECISIONS.md`    | modeling-decision debates + resolutions (exergy, salt reconciliation, etc.)                | debate sessions          |
 
 **Rules for portability:**
+
 - No finding lives only in a chat transcript. Every session ends by emitting a paste-ready block for the relevant file above.
 - Keep entries **atomic and self-contained** (a new reader has zero context).
 - If this account maxes out: the 7 files above + the SAM install + PySAM scripts = complete handoff. Nothing else required.
@@ -142,7 +143,7 @@ Do them roughly in this order; #2 and #3 can overlap.
 - [ ] **Session B (Code lane): Continuity scaffold + env capture** — create `CLAUDE.md`, capture SAM/PySAM versions, confirm which sCO₂ state points are exposed (feeds the exergy decision). → emits `CLAUDE.md`, seeds `VALIDATION.md`.
 - [ ] **Session C (this chat lane): First research pass** — validation-target papers (Turchi, Chacartegui, +sCO₂ recompression with full state points) and nano-HTF property literature to firm up Obj1 provenance. → emits `SOURCES.md`, `PROPERTIES.md` seed.
 
-*(Launch prompts for A/B/C are provided separately in this session.)*
+_(Launch prompts for A/B/C are provided separately in this session.)_
 
 ---
 
