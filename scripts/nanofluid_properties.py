@@ -1,6 +1,32 @@
-"""
-Nanofluid property module
-=========================
+r"""
+Nanofluid property module -- OBJECTIVE 1, reused from prior work
+================================================================
+
+PURPOSE. Maps nanoparticle mass fraction and temperature to the thermophysical
+properties every other module in this project consumes. This is MASTER_PLAN.md
+Objective 1, which §36 records as "largely reused from prior work" -- this file
+IS that prior work. It is a heavily-validated asset: treat it as a dependency to
+call, not as code to re-derive. `validate()` re-checks the fits against the
+measured anchor points and is the thing to run if you suspect drift.
+
+PROVENANCE NOTE. Promoted into scripts/ on 2026-08-13 (Session E) from the repo
+root, where it had been dropped in untracked. Only the module docstring, the
+__main__ demo's output path and one duplicated `return` were touched; every
+correlation, coefficient and uncertainty band is byte-for-byte the original.
+The two files that arrived alongside it -- sam_case.py, sco2_cycle_map.py -- are
+a DIFFERENT matter: they are prior-project reference material, not validated
+here, and live under reference/prior_project/. See that directory's README.
+
+INPUTS. None -- every coefficient is transcribed inline from the sources below.
+Pure Python + stdlib `math`; no numpy, no PySAM, no CoolProp.
+
+HOW TO RUN (self-check + property table + a sample SAM export):
+    .\.venv\Scripts\python.exe -u .\scripts\nanofluid_properties.py
+
+CONSUMED BY. scripts/htf_sam_bridge.py, which turns `htf_table_rows()` into the
+7-column table SAM's `rec_htf = 50` custom-fluid path wants (CLAUDE.md §6).
+
+---
 
 Maps nanoparticle mass fraction (phi_mass, wt fraction) and temperature to the
 four thermophysical properties consumed by the sCO2 / SAM techno-economic model:
@@ -29,6 +55,7 @@ status for each input is documented next to its definition below.
 
 from __future__ import annotations
 import math
+import os
 from dataclasses import dataclass
 from typing import Sequence
 
@@ -580,7 +607,6 @@ def write_sam_htf_table(phi_mass: float, T_grid_C: Sequence[float], path: str,
         for r in rows:
             f.write(",".join(f"{v:.6g}" for v in r) + "\n")
     return path
-    return path
 
 
 # =============================================================================
@@ -634,7 +660,13 @@ if __name__ == "__main__":
         print(f"    mu  = {p['mu'].nominal*1e3:8.3f}  "
               f"[{p['mu'].lo*1e3:.3f}, {p['mu'].hi*1e3:.3f}] mPa.s")
 
-    grid = [450.0, 500.0, 550.0, 600.0, 650.0, 700.0]
-    out = write_sam_htf_table(0.007, grid, "/tmp/sam_htf_0p7wt.csv")
+    # Results go to results/, not /tmp -- CLAUDE.md §0 rule 2, and /tmp does not
+    # exist on Windows anyway (this line was the module's only portability bug).
+    grid = [T_VALID_MIN_C, 500.0, 550.0, 600.0, 650.0, T_VALID_MAX_C]
+    results_dir = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "results")
+    os.makedirs(results_dir, exist_ok=True)
+    out = write_sam_htf_table(
+        0.007, grid, os.path.join(results_dir, "sam_htf_table_0p7wt.csv"))
     print(f"\nSAM table written -> {out}  (format confirmed vs SAM's Edit "
           f"Material Properties dialog; enthalpy reference/datum still TBC)")
