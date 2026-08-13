@@ -54,31 +54,46 @@ against case F's 0.51289 so the size of that move is visible rather than buried.
 *** STATUS 2026-08-13: THE OFF-DESIGN SWEEP DOES NOT CONVERGE AT THE CASE F DESIGN. ***
 
 The design point solves in 0.1 s and is a valid recompression cycle. Turning on the off-design
-sweep (`is_generate_udpc = 1`) then fails to complete in 5-16 minutes at 3^3 OR 5^3. What has
-been ruled out by direct experiment, each as its own run:
+sweep (`is_generate_udpc = 1`) then fails to complete in 5-16 minutes at 3^3 OR 5^3.
 
-    the custom chloride fluid  -- NO. The identical sweep on SAM's built-in nitrate (htf = 17)
-                                  hangs exactly the same way, so this is not a property-table
-                                  problem.
-    the pinned f_rc            -- NO. is_recomp_ok = 1 (solver free to choose) still hangs.
-    the pinned pressure levels -- NO. is_P_high_fixed = 0, is_PR_fixed = 0 still hangs.
-    rel_tol = 4                -- NO. Dropping to the stock 3 still hangs.
+*** SEVEN SINGLE-VARIABLE DEVIATIONS FROM CASE F WERE TESTED. NONE OF THEM FIXES IT. ***
+Each was its own run, changing exactly one thing and leaving the rest of case F intact:
 
-What DOES converge, in 93.6 s: design_method = 1 (target efficiency) with a free f_rc, free
-pressures and stock tolerance. But it comes back with **recomp_frac = 0.0** -- the cycle has
-collapsed to simple recuperated, which is precisely the failure mode CLAUDE.md §4.3 documents,
-and precisely what the prior project's own recorded baseline of 0.113 was showing.
+    the custom chloride fluid      NO -- the identical sweep on built-in nitrate (htf = 17)
+                                        hangs the same way. Not a property-table problem.
+    pinned f_rc                    NO -- is_recomp_ok = 1 (solver free) still hangs.
+    pinned pressure levels         NO -- is_P_high_fixed = 0, is_PR_fixed = 0 still hangs.
+    rel_tol = 4                    NO -- the stock rel_tol = 3 still hangs.
+    recuperators by min approach   NO -- HTR/LTR_design_code = 3 at case F's OWN produced
+                                        effectivenesses (0.97510 / 0.93098) still hangs.
+    design_method = 3              NO -- method 2 (total UA = 2306.6 kW/K) hangs; method 1
+                                        (target efficiency 0.50) hangs.
+    aggressive sweep corners       NO -- narrowing to m_dot 0.85-1.05, T_amb 15-40 C,
+                                        T_htf 680-710 C still hangs. Not a corner-feasibility
+                                        problem either.
 
-    So the sweep converges only when the design is left loose enough to collapse, and the
-    configuration that preserves the validated recompression cycle is the one that will not
-    converge. That tension is the real finding here, and it is unresolved.
+What DOES converge, in 93.6 s, is the whole loose bundle at once: design_method = 1 with a free
+f_rc, free pressures and stock tolerance. It returns **recomp_frac = 0.0** -- collapsed to simple
+recuperated, precisely the failure mode CLAUDE.md §4.3 documents and the same signature as the
+prior project's recorded 0.113.
 
-Remaining suspects, narrowed to two, for whoever picks this up: `design_method = 3` (specify
-each recuperator) and the min-approach-dT recuperator specification (`HTR/LTR_design_code = 2`)
-held fixed across every off-design point. Test them one at a time -- everything else on the list
-above has already been eliminated. A 10 K approach may simply be infeasible at deep turndown,
-in which case switching the MAP RUN to effectiveness (code 3, which is scale-free, CLAUDE.md
-§4.7) while keeping the design validation at code 2 is the obvious thing to try first.
+    So this is NOT one bad setting. A case-F-style FULLY DETERMINED design -- every recuperator
+    specified, f_rc pinned, both pressure levels pinned -- appears to be over-constrained for
+    UDPC generation: the off-design solver needs degrees of freedom that the validation design
+    deliberately removes. The sweep converges only when the cycle is loose enough to collapse,
+    and the configuration that preserves the validated recompression cycle will not converge.
+    That tension is the finding, and it is unresolved.
+
+FOR WHOEVER PICKS THIS UP: stop bisecting away from case F -- that direction is exhausted, all
+seven cells are negative. Bisect the other way instead. Start from the known-good loose bundle
+(93.6 s) and re-tighten ONE setting at a time toward case F until it stops converging; the
+boundary is a COMBINATION inside {design_method, f_rc pinning, pressure pinning}, and finding it
+costs ~1.5 min per success against ~5 min per failure, so the reverse direction is also cheaper.
+
+If the boundary turns out to exclude a pinned f_rc entirely, that is a real modelling decision
+rather than a bug, and it should go to DECISIONS.md: the map would then have to be generated at
+a solver-chosen f_rc, and the gap against case F's 0.4097 measured and reported rather than
+assumed small -- f_rc is decision variable #10, which the optimiser sweeps anyway.
 
 Until that is resolved `--design-only` is the usable mode, and `--selftest` verifies the
 inverse-split transform independently of whether ssc converges at all.

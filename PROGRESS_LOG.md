@@ -578,3 +578,27 @@ power block here is deliberately still the **steam** Rankine, which cannot explo
 recuperator spec held across off-design. **Try `HTR/LTR_design_code = 3` (effectiveness,
 scale-free, §4.7) for the MAP run while keeping code 2 for design validation** — a 10 K approach
 may simply be infeasible at deep turndown. Then §11 items 3–4 (decision vector, Morris).
+
+**UPDATE, same session — that hypothesis was tested and is WRONG, along with every other
+single-variable one.** `HTR/LTR_design_code = 3`, pinned at case F's own produced
+effectivenesses (0.97510 / 0.93098), **still hangs**. So do three further single changes tried
+after it: `design_method = 2` (total UA 2306.6 kW/K), `design_method = 1` (target η 0.50), and
+narrowing the sweep corners to m_dot 0.85–1.05 / T_amb 15–40 °C / T_htf 680–710 °C.
+
+**That is seven single-variable deviations from case F, all negative.** The earlier framing —
+"two suspects remain" — was wrong: it assumed one bad setting. There isn't one. Only the *whole
+loose bundle at once* converges (93.6 s, `recomp_frac = 0.0`).
+
+> **Revised conclusion: a case-F-style FULLY DETERMINED design — every recuperator specified,
+> f_rc pinned, both pressures pinned — is over-constrained for UDPC generation.** The off-design
+> solver needs degrees of freedom that the validation design deliberately removes.
+
+**Revised next step: bisect in the OPPOSITE direction.** Start from the known-good loose bundle
+and re-tighten one setting at a time toward case F until convergence breaks. The boundary is a
+*combination* inside {design_method, f_rc pinning, pressure pinning}. It is also the cheaper
+direction: ~1.5 min per success versus ~5 min per failure.
+
+If the boundary excludes a pinned f_rc outright, that is a **modelling decision, not a bug**, and
+belongs in `DECISIONS.md`: the map would be generated at a solver-chosen f_rc and the gap against
+case F's 0.4097 measured rather than assumed small. f_rc is decision variable #10, which the
+optimiser sweeps anyway — so this may cost less than it first appears.

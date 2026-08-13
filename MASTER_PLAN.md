@@ -229,8 +229,13 @@ Ordered. Each item blocks the ones below it. **Nothing in §12 competes with the
      ssc (`CLAUDE.md` §4.11).
    - ❌ **The off-design sweep does not converge** — it completes only in configurations that
      collapse the recompression cycle to `recomp_frac = 0`. **This is the single thing blocking
-     the guaranteed deliverable.** Next move: try `HTR/LTR_design_code = 3` (effectiveness) for
-     the map run while keeping code 2 for design validation.
+     the guaranteed deliverable.** **Seven** single-variable deviations from case F have now been
+     tested and all are negative (fluid, f_rc pinning, pressure pinning, `rel_tol`, recuperator
+     code 3, `design_method` 1 and 2, sweep corners) — so it is **not one bad setting**: a fully
+     determined case-F-style design is over-constrained for UDPC generation. **Next move: bisect
+     the other way** — start from the loose bundle that converges in 93.6 s and re-tighten toward
+     case F until it breaks. If the boundary excludes a pinned f_rc, that is a modelling decision
+     for `DECISIONS.md`, not a bug.
 3. **Wire the decision vector** — expose all 10 variables of §3 as model inputs with validated
    ranges, so screening can drive them.
 4. **Morris screening** (§7) over the 10 variables. ← **THE GUARANTEED DELIVERABLE.**
