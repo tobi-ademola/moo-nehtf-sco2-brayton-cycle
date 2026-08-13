@@ -185,11 +185,24 @@ Do **not** try to validate the whole integrated plant against one paper (few rep
       (Session B). Exergy layer is viable; §5's fallback is not needed.
 - [x] ~~Which published sCO₂ case has enough reported state points?~~ **Dostal 2004**, Tables
       10.2–10.4 (Session C); validated to 0.07 %/node (Session E).
-- [ ] **Can SAM override molten-salt properties, or must the nano-chloride HTF couple externally?**
-      — **THE LIVE BLOCKER.** Partially answered: `rec_htf = 50` takes a user-defined 7-column
-      property table (`CLAUDE.md` §6), so an override path exists. **Unverified** whether it
-      accepts the full chloride temperature range and whether the receiver/TES correlations stay
-      valid there. **This gates Objective 2 — answer it first.**
+- [x] ~~**Can SAM override molten-salt properties, or must the nano-chloride HTF couple
+      externally?**~~ **ANSWERED 2026-08-13 — IT COUPLES INSIDE SAM.** `rec_htf = 50` accepts the
+      nano-chloride table across 450–700 °C, stores it with **zero** round-trip deviation across
+      six cases, and the annual model solves on it (`scripts/htf_sam_bridge.py`,
+      `results/htf_sam_bridge_*`). No external coupling layer needed; `DECISIONS.md` D2's
+      mechanism confirmed. ⚠ But **acceptance is not validity** — see the new risk below.
+- [ ] ⚠ **NEW — the chloride's melting point is a hard constraint, not a preference.** It melts
+      at 401.4 °C, so the cold tank cannot approach nitrate's 290 °C. The resulting narrow loop
+      ΔT drives receiver pump power roughly as ΔT⁻³: **124 K → 162 MW (negative nameplate,
+      infeasible)**, 250 K → 27.0 MW, 284 K → 8.5 MW. **The optimizer must be given a floor under
+      T_hot, not left to discover it** — this binds decision variables #5 and #6 together.
+      ssc reports no error on the infeasible design, so **screen every run on
+      `system_capacity > 0`** (`CLAUDE.md` §4.14).
+- [ ] ⚠ **NEW — the UDPC off-design sweep does not converge at the case F design.** It completes
+      only when the cycle is left loose enough to **collapse to `recomp_frac = 0`** (§4.3). This
+      blocks §11 item 2. Ruled out already: the custom fluid, pinned f_rc, pinned pressures,
+      `rel_tol`. Remaining suspects: `design_method = 3`, and the min-approach-dT recuperator
+      spec held across off-design. See `scripts/build_udpc_map.py`.
 - [ ] MD-viscosity provenance sentence for the thesis — **research/writing**, not blocking.
       (`SOURCES.md` §C0 already reframes this from weakness to field convention.)
 - [ ] Location set for Obj5 — Morocco TMY in hand, Southern Africa file needs re-downloading.
@@ -201,11 +214,23 @@ Do **not** try to validate the whole integrated plant against one paper (few rep
 
 Ordered. Each item blocks the ones below it. **Nothing in §12 competes with these.**
 
-1. **Salt/SAM reconciliation** (§4 open flag, §10 blocker). Verify `rec_htf = 50` accepts the
-   nano-chloride property table across its full operating range. Decides whether the HTF couples
-   *inside* SAM or *externally* — and that choice shapes every item below.
+1. ~~**Salt/SAM reconciliation**~~ — ✅ **DONE 2026-08-13, `scripts/htf_sam_bridge.py`.** The HTF
+   couples **inside** SAM: `rec_htf = 50` accepts the nano-chloride table across 450–700 °C with
+   zero round-trip deviation and the annual model solves. Two constraints came with the answer
+   and are now live risks in §10: the melting-point/ΔT/pumping floor, and the fact that ssc
+   reports no error on a **negative nameplate**.
 2. **Build the integrated model** — `Sco2CspUdPcTables` → `TcsmoltenSalt` via `pc_config = 1` +
-   `ud_is_sco2_regr = 1` (`CLAUDE.md` §3). This is **Objective 2** and it does not exist yet.
+   `ud_is_sco2_regr = 1` (`CLAUDE.md` §3). This is **Objective 2**. ⏳ **PARTIAL —
+   `scripts/build_udpc_map.py`. THE CRITICAL PATH IS HERE.**
+   - ✅ Design point solves at the case F cycle on the nano-chloride (f_rc 0.4097 held, η 0.50547,
+     −0.742 pp vs case F — the cost of TIT 680 °C instead of 700 °C, which keeps the chloride
+     inside its stated validity).
+   - ✅ The 13-col→7-col inverse-split transform is **proven** by `--selftest`, independently of
+     ssc (`CLAUDE.md` §4.11).
+   - ❌ **The off-design sweep does not converge** — it completes only in configurations that
+     collapse the recompression cycle to `recomp_frac = 0`. **This is the single thing blocking
+     the guaranteed deliverable.** Next move: try `HTR/LTR_design_code = 3` (effectiveness) for
+     the map run while keeping code 2 for design validation.
 3. **Wire the decision vector** — expose all 10 variables of §3 as model inputs with validated
    ranges, so screening can drive them.
 4. **Morris screening** (§7) over the 10 variables. ← **THE GUARANTEED DELIVERABLE.**

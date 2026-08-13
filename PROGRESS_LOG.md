@@ -501,3 +501,80 @@ risk marked closed and §11 item 5 re-scoped.
 
 **Next.** Unchanged — `MASTER_PLAN.md` §11 item 1, the salt/SAM reconciliation, which is still the
 live blocker on Objective 2.
+
+---
+
+## 2026-08-13 — Code lane — §11 item 1 CLOSED, item 2 PARTIAL; prior-project files triaged
+
+**Trigger.** "What are the next steps" → a review of `MASTER_PLAN.md` §11 turned up three
+substantial **untracked** files in the repo root that the plan knew nothing about. The user
+clarified their status, which changed what to do with each: `nanofluid_properties.py` is a
+**heavily-validated asset from previous work**, and `sam_case.py` / `sco2_cycle_map.py` are
+**reference material to mine**, not code to adopt.
+
+**⚠ A second Code session was committing to this repo concurrently** (commit `822562b`, landed
+between two of this session's commands). It absorbed an in-flight `git add`, and committed the
+two reference files into the repo root. No damage — its exergy work was independently re-run
+here and reproduces (HTR-dominant 41.4 %, balance 1.5e-04) — but **check `git log` before
+assuming the tree is yours.**
+
+**Done.**
+
+1. **`DECISIONS.md` committed** (`f2fde9d`). It existed only as an untracked file while §8 listed
+   it as one of the seven portable continuity files — the flag raised in the previous entry.
+2. **Pre-existing uncommitted work committed** (`822562b`, by the other session): the exergy
+   layer check and the `entropy_generation()` refactor. Verified first — case F reproduces at
+   η 0.51289 / Sgen +10.22522 and case A at 0.51532 / +9.91403, bit-for-bit.
+3. **`nanofluid_properties.py` promoted** to `scripts/` (`b0c0be7`) with a §0 header. Physics
+   byte-for-byte unchanged; all six Han/B3 anchor points still reproduce. Fixed its one
+   portability bug — a hardcoded `/tmp` output path that killed the run on Windows.
+4. **Reference files parked** in `reference/prior_project/` (`85d7eff`) with a README recording
+   why they cannot be used directly: their cycle design contradicts case F (η 0.44 vs 0.51289,
+   `recomp_frac` 0.113 vs 0.4097), `design_method = 1` + `is_recomp_ok = 1` is the §4.3 collapse
+   mode, and their "CLAUDE.md §6/§7" citations point at a **different repo's** file.
+5. **`CLAUDE.md` §4.11–§4.14 and §6 written** (`b991b33`) — every harvested claim re-verified
+   here rather than transcribed on the reference's authority.
+
+**§11 ITEM 1 — THE LIVE BLOCKER — IS CLOSED. `scripts/htf_sam_bridge.py` (`330fe7e`).**
+
+`rec_htf = 50` **accepts** the nano-chloride table: stored with **zero** round-trip deviation
+across six cases, annual model solves. **The nano-chloride couples INSIDE SAM — no external
+coupling layer needed.** `DECISIONS.md` D2's mechanism is confirmed and `MASTER_PLAN.md` §4/§10's
+open flag is answered.
+
+Three things matter more than the yes:
+
+- **Acceptance is not validity.** A chloride case at nitrate's hot temperature returned a
+  **negative nameplate** (−52,858 kW; receiver pump 162 MW) with no error, no warning, a full
+  8760 `gen` array and a plausible 288 GWh. Screen on `system_capacity > 0`.
+- **`capacity_factor` is not comparable across these cases** — its denominator is the per-case
+  nameplate, so CF *rises* while annual energy *falls*.
+- **The ΔT→pumping coupling is the study's real constraint.** 124 K → 162.30 MW (infeasible);
+  250 K → 27.04 MW; 284 K (nitrate) → 8.49 MW. Roughly cubic. Puts a hard floor under T_hot that
+  the optimizer must be *given*, not left to discover — binds variables #5 and #6.
+
+Nano-enhancement behaves as the property model predicts: 0.7 wt% beats bare eutectic on output
+(479.2 vs 466.3 GWh) *and* pump power (27.04 vs 35.31 MW); 2.0 wt% is worse than bare on both,
+tracking Han's cp enhancement from +10.5 % to −3.5 %. **The loading optimum is interior** — which
+is what makes it worth optimising. The chloride still trails nitrate by −9.6 %, as expected: the
+power block here is deliberately still the **steam** Rankine, which cannot exploit 700 °C.
+
+**§11 ITEM 2 — PARTIAL, AND HONESTLY SO. `scripts/build_udpc_map.py` (`08e1121`).**
+
+- **Design point: solid.** 0.1 s, f_rc 0.4097 held, PR 2.6000, η 0.50547 — −0.742 pp vs case F,
+  the expected cost of running T_htf_hot 700 °C (TIT 680) instead of 720 °C, which keeps the
+  chloride inside its stated validity. Case F constants are *imported* from `validate_dostal.py`.
+- **Transform: proven.** `--selftest` verifies the 13-col→7-col inverse-split on synthetic data
+  independently of ssc. Needed precisely because the sweep does not run.
+- **Off-design sweep: BLOCKED.** Will not complete in 5–16 min at 3³ or 5³. Ruled out by direct
+  experiment: the custom fluid (nitrate hangs identically), pinned f_rc, pinned pressures, and
+  `rel_tol = 4`. A loose config converges in 93.6 s but returns **`recomp_frac = 0.0`** — the
+  §4.3 collapse, same signature as the prior project's 0.113.
+
+> **The sweep converges only when the design is loose enough to collapse; the configuration that
+> preserves the validated recompression cycle will not converge.** Unresolved.
+
+**Next.** Two suspects remain, down from six: `design_method = 3`, and the min-approach-dT
+recuperator spec held across off-design. **Try `HTR/LTR_design_code = 3` (effectiveness,
+scale-free, §4.7) for the MAP run while keeping code 2 for design validation** — a 10 K approach
+may simply be infeasible at deep turndown. Then §11 items 3–4 (decision vector, Morris).
