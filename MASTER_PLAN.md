@@ -5,7 +5,9 @@
 > **cold** by reading only this file plus the linked knowledge-base entries. Keep it
 > current. If you update nothing else, update this.
 
-**Last updated:** (set on each edit) — v0.1 initial
+**Last updated:** 2026-08-13 — Session E. **Power-block validation gate PASSED** (see §2, §6).
+Critical path now runs through the **integrated model** (§11), which is not yet built. Validation
+hardening is explicitly **deferred** to §12 so it stops competing with the sprint deliverable.
 **Owner:** (you)
 **Deadline horizon:** ~33 working hours from first session
 **Thesis topic:** Multi-objective optimization of nano-enhanced HTFs integrated with an sCO₂ Brayton cycle
@@ -40,10 +42,24 @@
 ```
 [Obj1 properties ready]  ->  [Model built in PySAM]  ->  [VALIDATION passes]  ->  [Parametric screening]  ->  [ (stretch) full MOO ]
         |                            |                          |                        |
-   mostly done (prior work)     Claude Code lane          GATE — nothing              GUARANTEED
-                                                          downstream is valid          DELIVERABLE
-                                                          until this passes
+   mostly done (prior work)     PARTLY DONE              POWER BLOCK: PASSED         NOT STARTED
+                               power block yes,          field/TES: baseline run     <-- GUARANTEED
+                               INTEGRATION no            (GUI check blocked, and     DELIVERABLE
+                                    ^                     not required)
+                                    |
+                          *** THE CRITICAL PATH IS HERE NOW *** (§11)
 ```
+
+**Gate status, 2026-08-13.** The power-block gate is **PASSED**: the sCO₂ recompression cycle
+reproduces every node of Dostal (2004) Table 10.4 to within 0.070 % in *h* and η to +0.019 pp
+(`VALIDATION.md` §2.3.4/§2.3.4a). **A gate is binary — it is passed, and further validation work
+does not make it "more passed."** Everything still open in the validation lane is defensive depth
+for the viva, not permission to proceed; it is parked in **§12** with an explicit restart trigger.
+
+> **The binding constraint is no longer model credibility, it is model COVERAGE.** The integrated
+> CSP–HTF–TES–sCO₂ model of Objective 2 does not exist yet, and the screening that is the
+> *guaranteed deliverable* runs on top of it. Time spent on a second literature anchor is time not
+> spent building the thing the deliverable depends on.
 
 **Guaranteed deliverable:** validated model + parametric screening identifying the most impactful decision variables.
 **Stretch deliverable:** full multi-objective optimization (NSGA-II/NSGA-III) over the pruned/full decision vector.
@@ -97,9 +113,16 @@ Decision vector **X = [SM, tTES, φ, dp, THTF, ṁHTF, Tt,in, PH, PR, fRC]**
 
 Do **not** try to validate the whole integrated plant against one paper (few report enough).
 
-- **Power block:** validate the sCO₂ recompression cycle against a published case **with reported state points + efficiency**. Candidate starting points (from the attached paper's refs): **Turchi 2009**, **Chacartegui et al. 2011**. → research task, this-chat lane.
-- **Solar field / TES:** validate against a **SAM/NREL reference case** (e.g. a Gen3 molten-salt tower reference). → Claude Code lane.
-- Document both validations separately in `VALIDATION.md` with % error tables.
+- **Power block — DONE.** Validated against **Dostal 2004** (MIT-ANP-TR-100) Table 10.4, which
+  publishes full node state tables — the Turchi 2009 / Chacartegui 2011 candidates named here
+  originally were superseded because neither gives per-node *h* and *s*. Result: all 8 nodes within
+  0.070 % in *h*, η +0.019 pp, plus the 2 untabulated junction nodes validated by conservation.
+  `VALIDATION.md` §2.3.4, §2.3.4a, §2.3.3a-R.
+- **Solar field / TES — baseline run, sufficient.** `MSPTSingleOwner` + Daggett TMY executed
+  (`VALIDATION.md` §1.3) and pinned as a regression baseline. The SAM **GUI** cross-check (§1.4) is
+  blocked — no SAM install on this machine (`CLAUDE.md` §1.0a) — and is **not on the critical path**:
+  the GUI and PySAM run the *same* ssc 306, so the comparison tests packaging, not physics.
+- Both documented in `VALIDATION.md` with % error tables.
 
 ---
 
@@ -134,23 +157,76 @@ Do **not** try to validate the whole integrated plant against one paper (few rep
 
 ---
 
-## 9. IMMEDIATE NEXT ACTIONS (session queue)
+## 9. SESSIONS COMPLETED
 
-The three launch prompts below are written to be pasted as the FIRST message of a fresh session.
-Do them roughly in this order; #2 and #3 can overlap.
-
-- [ ] **Session A (this chat lane): Modeling-decision debate** — resolve exergy in/out (needs the entropy-exposure check result from Code), screening method, salt/SAM reconciliation, validation targets. → emits `DECISIONS.md`.
-- [ ] **Session B (Code lane): Continuity scaffold + env capture** — create `CLAUDE.md`, capture SAM/PySAM versions, confirm which sCO₂ state points are exposed (feeds the exergy decision). → emits `CLAUDE.md`, seeds `VALIDATION.md`.
-- [ ] **Session C (this chat lane): First research pass** — validation-target papers (Turchi, Chacartegui, +sCO₂ recompression with full state points) and nano-HTF property literature to firm up Obj1 provenance. → emits `SOURCES.md`, `PROPERTIES.md` seed.
-
-_(Launch prompts for A/B/C are provided separately in this session.)_
+- [x] **Session A** — modeling-decision debate. ⚠ `DECISIONS.md` is listed in §8 but **does not
+      exist in the repo**; either it was never written or it lives only in chat. Recreate it if
+      any decision here needs to be defended.
+- [x] **Session B (Code)** — continuity scaffold + env capture → `CLAUDE.md`, `VALIDATION.md` seed.
+      **Confirmed PySAM exposes T, P, h AND s at every cycle node** → exergy is viable (§5 resolved).
+- [x] **Session C (research + Code)** — literature pass → `SOURCES.md`, `PROPERTIES.md`;
+      Dostal 2004 selected as the power-block anchor; first validation run.
+- [x] **Session D (docs)** — machine migration, stale-path cleanup, Morocco MENA TMY added.
+- [x] **Session E (Code)** — env rebuilt from scratch; node-by-node error table; junction
+      conservation checks; **case F adopted as the validated baseline**; second-anchor assessment
+      (`SOURCES.md` §A8). **Power-block gate PASSED.**
 
 ---
 
 ## 10. OPEN QUESTIONS / RISKS (live list)
 
-- [ ] Does PySAM expose per-state entropy for the sCO₂ recompression cycle? (gates exergy) — **Code to answer**
-- [ ] Can SAM override molten-salt properties, or must the nano-chloride HTF couple externally? — **Code to answer**
-- [ ] Which published sCO₂ case has enough reported state points for power-block validation? — **research to answer**
-- [ ] MD-viscosity provenance: is there a citable MD study, or is it our own? Needs a defensible thesis sentence. — **research/writing**
-- [ ] Location set for Obj5: confirm specific MENA + Southern Africa sites with available TMY/solar-resource data. — **later**
+- [x] ~~Does PySAM expose per-state entropy?~~ **YES** — T, P, h, s at all 10 real nodes
+      (Session B). Exergy layer is viable; §5's fallback is not needed.
+- [x] ~~Which published sCO₂ case has enough reported state points?~~ **Dostal 2004**, Tables
+      10.2–10.4 (Session C); validated to 0.07 %/node (Session E).
+- [ ] **Can SAM override molten-salt properties, or must the nano-chloride HTF couple externally?**
+      — **THE LIVE BLOCKER.** Partially answered: `rec_htf = 50` takes a user-defined 7-column
+      property table (`CLAUDE.md` §6), so an override path exists. **Unverified** whether it
+      accepts the full chloride temperature range and whether the receiver/TES correlations stay
+      valid there. **This gates Objective 2 — answer it first.**
+- [ ] MD-viscosity provenance sentence for the thesis — **research/writing**, not blocking.
+      (`SOURCES.md` §C0 already reframes this from weakness to field convention.)
+- [ ] Location set for Obj5 — Morocco TMY in hand, Southern Africa file needs re-downloading.
+      **Post-defense scope; not blocking.**
+
+---
+
+## 11. CRITICAL PATH FROM HERE (the only list that matters right now)
+
+Ordered. Each item blocks the ones below it. **Nothing in §12 competes with these.**
+
+1. **Salt/SAM reconciliation** (§4 open flag, §10 blocker). Verify `rec_htf = 50` accepts the
+   nano-chloride property table across its full operating range. Decides whether the HTF couples
+   *inside* SAM or *externally* — and that choice shapes every item below.
+2. **Build the integrated model** — `Sco2CspUdPcTables` → `TcsmoltenSalt` via `pc_config = 1` +
+   `ud_is_sco2_regr = 1` (`CLAUDE.md` §3). This is **Objective 2** and it does not exist yet.
+3. **Wire the decision vector** — expose all 10 variables of §3 as model inputs with validated
+   ranges, so screening can drive them.
+4. **Morris screening** (§7) over the 10 variables. ← **THE GUARANTEED DELIVERABLE.**
+5. **Exergy reporting layer** (§5) — build last, switch on last; the state points it needs are
+   already validated, so this is now low-risk.
+6. **NSGA-II MOO** (§7) — stretch only.
+
+---
+
+## 12. DEFERRED BACKLOG — validation hardening (do NOT start before §11 item 4 is done)
+
+Parked deliberately on 2026-08-13. Each item is **defensive depth for the viva, not a modelling
+risk**, and the power-block gate has already passed without them.
+
+**Restart trigger: after Morris screening (§11 item 4) is delivered.** At that point the guaranteed
+deliverable is banked, and these become cheap thesis-chapter reinforcement. Pick up in this order:
+
+1. **Dostal 550 °C + 650 °C node tables** (Tables 10.2/10.3, already transcribed in
+   `VALIDATION.md` §2.3.2). **Cheapest and highest value — no new literature, scripts already
+   exist.** Two of the ten decision variables (T_t,in and f_RC) get swept by the optimizer while
+   the model is validated at only one point in that space; this covers a 150 °C span. It also
+   doubles as a falsifiable test of the f = 0.4097 finding (`SOURCES.md` §A8).
+2. **Battisti 2023 exergy cross-check** — confirm HTR-dominant exergy destruction against
+   `SOURCES.md` F2. **Do this when the §11 item 5 exergy layer exists**, not before; it costs
+   almost nothing once the layer is built.
+3. **Independent node-level anchor** — acquire Padilla 2015 / Moisseytsev & Sienicki 2009 /
+   Sarkar 2009 (`SOURCES.md` §A8). **Highest cost, lowest marginal return.** Only worth it if the
+   viva specifically presses on single-source dependence. **Do not acquire PDFs before then.**
+4. **SAM GUI cross-check** (`VALIDATION.md` §1.4) — blocked on a SAM install, and tests packaging
+   rather than physics since GUI and PySAM share ssc 306. Lowest priority of all.

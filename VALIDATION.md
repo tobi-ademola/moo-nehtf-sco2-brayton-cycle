@@ -528,7 +528,12 @@ w_net 85.51 kJ/kg — so you can validate component work terms individually, not
       included), restated §2.3.4 from case F with the old table kept as §2.3.4-A.
 - [ ] Consider reporting the Table 10.1 vs Table 10.4 *f* inconsistency as a finding in its own
       right — it is a defensible thesis contribution, and it affects anyone else validating
-      against Dostal's High-Performance design.
+      against Dostal's High-Performance design. *(Write-up task, not a modelling task.)*
+
+> ⏸ **EVERYTHING BELOW THIS LINE IS DEFERRED — see `MASTER_PLAN.md` §12.** The power-block gate
+> has **passed**; the remaining validation items are defensive depth for the viva, not modelling
+> risk, and they are parked so they stop competing with the sprint's guaranteed deliverable.
+> **Restart trigger: after the Morris screening is delivered** (`MASTER_PLAN.md` §11 item 4).
 - [x] Code lane: confirm §2.3.3a Checks 1 & 2 close numerically (validates LTR_HP_OUT, RC_OUT) —
       done Session E, results in §2.3.3a-R. **All 10 model nodes are now covered**: 8 by direct
       comparison, 2 by conservation. Provenance caveat on Checks 1–2 is discharged.

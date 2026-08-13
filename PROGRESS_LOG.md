@@ -396,7 +396,56 @@ and residual caveat, §3 open items closed.
 
 **Next.**
 
-- [ ] Second literature anchor at a different TIT (Turchi / Chacartegui) — with F matching to
-      0.07 %, the single-point-coincidence objection is the main one left.
+- [x] Second literature anchor — assessed, then **deliberately deferred**; see the entry below.
 - [ ] Then the `Sco2CspUdPcTables` → `TcsmoltenSalt` bridge (`CLAUDE.md` §3).
 - [ ] `VALIDATION.md` §1.4 GUI cross-check remains blocked (no SAM install, `CLAUDE.md` §1.0a).
+
+---
+
+## 2026-08-13 — Planning — Validation lane CLOSED and deferred; critical path re-pointed at the integrated model
+
+**Trigger.** After the second-anchor assessment (`SOURCES.md` §A8) the question was raised
+directly: is further validation on the critical path of a ~33-hour sprint, or a diversion?
+**Answer: a diversion.** Acted on immediately rather than continuing.
+
+**The reasoning, for the record.**
+
+1. `MASTER_PLAN.md` §2 makes validation a **gate**, and a gate is binary. The power block passed
+   it at 0.070 %/node and η +0.019 pp — far beyond what the gate asks. Further validation does not
+   make it "more passed."
+2. **One of the arguments made earlier this session cuts the other way, and is recorded here
+   honestly:** `f_RC` is **decision variable #10** and `T_t,in` is **#7** — the optimizer *sweeps*
+   both. So pinning f correctly matters far less than was implied when case F was recommended.
+   Case F was still right (its state points feed the exergy layer, and case A's were wrong by up
+   to 5.4 %), but a *second literature anchor* adds little on top of that.
+3. The binding constraint is no longer credibility, it is **coverage**: the integrated
+   CSP–HTF–TES–sCO₂ model of Objective 2 **does not exist yet**, and the Morris screening that is
+   the *guaranteed deliverable* sits on top of it.
+
+**What was done.** No model runs. Documentation only, to stop the validation lane competing with
+the deliverable:
+
+- `MASTER_PLAN.md` — was still at "v0.1 initial" and badly stale, which matters because §0 calls it
+  the single source of truth for cold starts. Rewritten: §2 critical-path diagram now shows where
+  the path actually is; §6 records Dostal as the anchor (superseding the Turchi/Chacartegui
+  candidates, neither of which publishes per-node *h*/*s*); §9 replaced with sessions actually
+  completed; §10 open questions resolved where answered; **new §11** (the ordered critical path)
+  and **new §12** (the deferred backlog with an explicit restart trigger).
+- `VALIDATION.md` §3 — deferral banner added pointing at `MASTER_PLAN.md` §12.
+
+**Deferred, with restart trigger "after Morris screening is delivered":** Dostal 550/650 °C node
+tables (cheapest, no new literature, covers the T_t,in span the optimizer will explore); Battisti
+2023 exergy cross-check (free once the exergy layer exists); independent node anchors — Padilla
+2015 / Moisseytsev 2009 / Sarkar 2009 (**PDFs deliberately not acquired**); SAM GUI cross-check.
+
+**Two things surfaced that are NOT deferred.**
+
+- ⚠ **`DECISIONS.md` does not exist.** `MASTER_PLAN.md` §8 lists it as one of the seven portable
+  continuity files, and Session A was supposed to emit it. Any decision it held lives only in a
+  chat transcript — which §8's own portability rule forbids.
+- ⚠ **The live blocker is the salt/SAM reconciliation** (§4 flag, §10). `rec_htf = 50` gives an
+  override path via a user-defined property table, but it is unverified across the chloride
+  temperature range. **This gates Objective 2 and should be the next thing run.**
+
+**Next.** `MASTER_PLAN.md` §11, in order — starting at item 1 (salt/SAM reconciliation), then the
+`Sco2CspUdPcTables` → `TcsmoltenSalt` bridge.
