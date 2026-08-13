@@ -3,9 +3,10 @@
 > Read this before touching anything. It is written so a **fresh Code session or a brand-new
 > account** can run the pipeline cold with zero prior context. Companion to `MASTER_PLAN.md`.
 
-**Last updated:** 2026-08-12 — Session C (Dostal 2004 literature validation; standing documentation rules)
+**Last updated:** 2026-08-13 — Session E (env rebuilt from scratch: Python 3.13 installed alongside
+3.14, `.venv` recreated; Dostal validation re-run and reproduced bit-for-bit — see §1.0, §1.0a, §7)
 **Machine:** Windows 11 Pro 10.0.26200, win32
-**Repo root:** `C:\Users\meade\moo-nehtf-sco2-brayton-cycle`
+**Repo root:** `C:\Users\chukw\code\moo-nehtf-sco2-brayton-cycle`
 
 ---
 
@@ -34,14 +35,38 @@ These are process rules, not suggestions — they hold regardless of how small t
 
 | Thing | Value | How verified |
 |---|---|---|
-| Python | **3.13.14** | `.venv\Scripts\python.exe --version` |
-| Virtualenv | `.venv\` in repo root | — |
+| Python | **3.13.15** (was 3.13.14 pre-migration — patch bump, no effect on results) | `.venv\Scripts\python.exe --version` |
+| Virtualenv | `.venv\` in repo root — **gitignored, rebuilt Session E on this machine** | — |
 | PySAM | **NREL-PySAM 7.1.1.post1** | `pip list` |
 | PySAM's bundled ssc | **ssc 306**, build `Windows 64 bit Visual C++ Apr 24 2026 01:21:21` | `ctypes` on `.venv\Lib\site-packages\PySAM\ssc.dll` |
 | numpy | **2.5.2** | installed Session B (was **absent** — PySAM 7.1.1 does not pull it in) |
 | CoolProp | **8.0.0** | installed Session C — independent CO₂ properties for validation |
-| SAM install A | **`C:\SAM\2025.4.16`** → ssc **306**, build `Apr 21 2026 10:12:37` | `ctypes` on its `x64\ssc.dll` |
-| SAM install B | **`C:\SAM\2026.7.3`** → ssc **308**, build `Jul  7 2026 00:00:07` | `ctypes` on its `x64\ssc.dll` |
+| SAM install A | **ABSENT on this machine** (was `C:\SAM\2025.4.16` → ssc 306) | `Test-Path C:\SAM` → false, 2026-08-13 |
+| SAM install B | **ABSENT on this machine** (was `C:\SAM\2026.7.3` → ssc 308) | `Test-Path C:\SAM` → false, 2026-08-13 |
+
+### 1.0 THE PYTHON VERSION IS NOT OPTIONAL — 3.14 CANNOT RUN THIS PROJECT
+
+This machine shipped with **Python 3.14 only** (`C:\Python314`). **NREL-PySAM publishes no 3.14
+wheels** — not "an older version resolves", *zero* versions resolve:
+
+```
+ERROR: Could not find a version that satisfies the requirement NREL-PySAM==7.1.1.post1
+       (from versions: none)
+```
+
+That error looks like a network or index failure and is not. Confirm the network is fine by
+resolving something else (`pip index versions CoolProp` lists ~50 versions) before chasing it.
+**Python 3.13 was installed alongside 3.14** (`winget install --id Python.Python.3.13 --scope user`,
+user scope, no admin) at `%LOCALAPPDATA%\Programs\Python\Python313`. Build the venv with
+`py -3.13`, never bare `py` — the launcher's default is still 3.14.
+
+### 1.0a NO SAM GUI INSTALL ON THIS MACHINE
+
+`C:\SAM\` does not exist here. This blocks **only** the three things §1.1 lists — GUI
+cross-checking, and the bundled weather/component libraries. It does **not** affect PySAM: the
+cycle scripts (`smoke_test.py`, `validate_dostal.py`) need no weather file and run fine.
+`VALIDATION.md` §1.4 (the SAM 2025.4.16 GUI cross-check) stays blocked until SAM is installed;
+`TcsmoltenSalt` annual runs need a weather file from `data/tmy/` (§5) instead of `C:\SAM\...`.
 
 ### 1.1 THE VERSION GOTCHA THAT MATTERS MOST
 
@@ -72,7 +97,7 @@ The SAM installs are still needed, for three things only:
 PowerShell (primary shell on this machine):
 
 ```powershell
-cd C:\Users\meade\moo-nehtf-sco2-brayton-cycle
+cd C:\Users\chukw\code\moo-nehtf-sco2-brayton-cycle
 .\.venv\Scripts\python.exe -u .\scripts\your_script.py
 ```
 
@@ -253,10 +278,15 @@ In `C:\SAM\2025.4.16\solar_resource\` (2026.7.3 has the same set):
 `blythe_ca`, **`daggett_ca`** (CSP default), `des_moines_ia`, `fargo_nd`, `imperial_ca`,
 `phoenix_az`, `tucson_az` — all `psmv3_60_tmy`.
 
-Already downloaded by the user, in `C:\Users\meade\SAM Downloaded Weather Files\`:
-`-28.2856_23.3667_..._nsrdb-msg-v1-0-0-tmy_60_tmy.csv` — **lat −28.29, lon 23.37 = Northern Cape,
-South Africa (Upington region).** This is a ready-made **Objective 5 (Southern Africa)** site.
-A MENA site still needs downloading.
+In `data/tmy/` (gitignored — not committed, but on disk for every session):
+- `158192_31.05_-6.86_tmy-2022.csv` — NSRDB TMY, **lat 31.05, lon −6.86 = Ouarzazate region,
+  Morocco.** Ready-made **MENA site** (added Session D, 2026-08-13).
+
+Previously tracked as "already downloaded by the user" at `C:\Users\meade\SAM Downloaded
+Weather Files\-28.2856_23.3667_..._nsrdb-msg-v1-0-0-tmy_60_tmy.csv` — **lat −28.29, lon 23.37 =
+Northern Cape, South Africa (Upington region), Objective 5 site.** **NOT FOUND on this machine**
+(checked under both `meade` and `chukw` user profiles, 2026-08-13) — needs re-downloading before
+next use. See `PROGRESS_LOG.md` 2026-08-13.
 
 ---
 
@@ -297,20 +327,50 @@ q_dot_HTR = 37396.61 kW       eff_HTR = 0.97241
 q_dot_LTR = 12369.53 kW       eff_LTR = 0.91190
 ```
 
-**Dostal 2004 literature validation** (`scripts/validate_dostal.py`, base case: TIT 700 °C,
-T_mc_in 32 °C, P_high 20 MPa, PR 2.6, f_rc 0.39, eta_mc/rc 0.89, eta_t 0.90, recuperator
-effectiveness 0.95 both, zero pressure loss):
+**Dostal 2004 literature validation — CASE F, the adopted baseline** (`scripts/validate_dostal.py`:
+TIT 700 °C, T_mc_in 32 °C, P_high 20 MPa, PR 2.6, **f_rc 0.4097**, eta_mc/rc 0.89, eta_t 0.90,
+**recuperators at 10 K approach both**, **Dostal's own per-HX ΔP**):
 ```
-eta_thermal_calc = 0.51532    <-- Dostal reports 51.27 % (+0.26 pp)
+eta_thermal_calc = 0.51289    <-- Dostal reports 51.27 % (+0.019 pp)
 P_comp_in = 7.6923 MPa        P_comp_out = 20.0000 MPa
-recomp_frac = 0.39000         m_dot_co2 = 87.269 kg/s
+recomp_frac = 0.40970         m_dot_co2 = 92.233 kg/s
+eff_HTR = 0.97625             eff_LTR = 0.93095      <-- UNEQUAL, and that is correct
+T_turb_out = 578.309 C        T_HTR_HP_out = 531.256 C
+recup UA total = 2306.6 kW/K  total Sgen = +10.22522 kW/K  (all 8 components > 0)
+```
+**All 8 of Dostal's published nodes match to within 0.070 % in *h*, 0.045 % in *s*, 0.000 % in
+*P*.** No node is flagged at any threshold down to 0.1 %. Converges without trouble at the
+near-critical compressor inlet — the `P_LOW_OFFSET_MPA` fallback never fires. ssc's internal CO₂
+properties match CoolProp to 1.0e-04 kJ/kg in *h*, so ssc is effectively REFPROP-equivalent and
+needs no external property lane.
+
+> **Why f_rc is 0.4097 and not the 0.39 Dostal's Table 10.1 states.** His Table 10.1 *f* and his
+> Table 10.4 state points are separate data and they disagree. Closing the mixer on his own
+> published enthalpies gives f = 0.4097; justifying 0.39 would need eta_rc = 0.752 against his
+> stated 0.89/0.948. The Advanced 650 °C design, used as a control, needs only 0.932 to justify
+> its stated 0.41 — so the method is sound and the contrast is real. Full argument:
+> `VALIDATION.md` §2.3.4a. **This is a deliberate, evidenced departure from a published input —
+> do not "correct" it back to 0.39.**
+
+**Legacy case A — REGRESSION ANCHOR ONLY, not a validation result** (same script, second case:
+equal recuperator effectiveness 0.95, lossless, f_rc 0.39):
+```
+eta_thermal_calc = 0.51532    recomp_frac = 0.39000    m_dot_co2 = 87.269 kg/s
+P_comp_in = 7.6923 MPa        P_comp_out = 20.0000 MPa
+eff_HTR = eff_LTR = 0.95000   recup UA total = 1882.3 kW/K
 T_turb_out = 573.364 C        T_HTR_HP_out = 522.367 C
 total Sgen = +9.91403 kW/K    (all 8 components > 0)
 ```
-Converges without trouble at the near-critical compressor inlet — the `P_LOW_OFFSET_MPA`
-fallback never fires. Dostal's 51.27 % is reproduced at recuperator effectiveness ≈ 0.9467.
-ssc's internal CO₂ properties match CoolProp to 1.6e-04 kJ/kg in *h* and 3.4e-07 kJ/kg-K in *s*,
-so ssc is effectively REFPROP-equivalent and needs no external property lane.
+It agrees with Dostal on η to +0.26 pp but via **two cancelling errors**, with internal state
+points wrong by up to 5.4 % — which is exactly why it is no longer the baseline. **Never quote
+these numbers as validation.** Its job now is drift detection: it reproduces bit-for-bit across
+machines, so any change here is an environment or ssc problem.
+
+> **Reproducibility, confirmed Session E (2026-08-13):** case A was re-run on a `.venv` rebuilt
+> from scratch on a different machine and a different Python patch (3.13.15 vs 3.13.14), and every
+> number came back **identical to every digit printed**, as did the whole effectiveness sweep —
+> including after case F was adopted and the builder refactored. Given ssc 306 these baselines are
+> environment-independent, so a future deviation is a real modelling change, never drift.
 
 **NREL MSPT reference annual run** (`MSPTSingleOwner` + Daggett TMY, stock defaults):
 ```

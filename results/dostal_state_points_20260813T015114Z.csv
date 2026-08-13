@@ -1,0 +1,25 @@
+case,idx,node,description,T_C,P_kPa,h_kJ_per_kg,s_kJ_per_kgK
+case_F_adopted,0,MC_IN,main compressor inlet,32.0,7692.307692307692,306.6747446536183,1.347795080493201
+case_F_adopted,1,MC_OUT,main compressor outlet,61.09853336408423,20000.0,327.25626852899074,1.3545775089617147
+case_F_adopted,2,LTR_HP_OUT,LTR high-pressure outlet,159.40717843152675,19990.22,538.3199354044193,1.9150768251653763
+case_F_adopted,3,MIXER_OUT,LTR-HP + recompressor merge,159.64293456791796,19990.22,538.6898804220565,1.9159318433551313
+case_F_adopted,4,HTR_HP_OUT,HTR high-pressure outlet = PHX inlet,531.2556636985319,19944.56,1011.9450519469607,2.7131022553706936
+case_F_adopted,5,TURB_IN,turbine inlet,700.0,19814.56,1223.3391707567116,2.9528618778434796
+case_F_adopted,6,TURB_OUT,turbine outlet = HTR low-pressure inlet,578.3091115425668,7929.217621234714,1078.9480738107347,2.971852353320758
+case_F_adopted,7,HTR_LP_OUT,HTR low-pressure outlet = LTR low-pressure inlet,169.5830332486085,7802.637659208703,605.6718051446045,2.220551829482531
+case_F_adopted,8,LTR_LP_OUT,LTR low-pressure outlet = flow split point,71.1271559711692,7704.927688521693,481.0809292069422,1.902327602961109
+case_F_adopted,9,RC_OUT,recompressor outlet,159.9830279824282,19990.22,539.2229013611923,1.9171629440256217
+case_F_adopted,10,PC_IN,pre-compressor inlet   (partial-cooling only -> NaN here),nan,nan,nan,nan
+case_F_adopted,11,PC_OUT,pre-compressor outlet  (partial-cooling only -> NaN here),nan,nan,nan,nan
+legacy_case_A,0,MC_IN,main compressor inlet,32.0,7692.307692307692,306.6747446536183,1.347795080493201
+legacy_case_A,1,MC_OUT,main compressor outlet,61.09853336408423,20000.0,327.25626852899074,1.3545775089617147
+legacy_case_A,2,LTR_HP_OUT,LTR high-pressure outlet,188.50705165080592,20000.0,581.6449926035908,2.0119872782720685
+legacy_case_A,3,MIXER_OUT,LTR-HP + recompressor merge,177.88651165713253,20000.0,566.2927887845036,1.9783422622832338
+legacy_case_A,4,HTR_HP_OUT,HTR high-pressure outlet = PHX inlet,522.3671426095449,20000.0,1000.9075306589887,2.698763852688525
+legacy_case_A,5,TURB_IN,turbine inlet,700.0,20000.0,1223.2713590977696,2.9509545974378035
+legacy_case_A,6,TURB_OUT,turbine outlet = HTR low-pressure inlet,573.363734884954,7692.307692307692,1073.1500335741207,2.970821535959564
+legacy_case_A,7,HTR_LP_OUT,HTR low-pressure outlet = LTR low-pressure inlet,198.01690133630888,7692.307692307692,638.5391211891742,2.294987274918382
+legacy_case_A,8,LTR_LP_OUT,LTR low-pressure outlet = flow split point,72.49345507561532,7692.307692307692,483.36218421565997,1.9091669385979695
+legacy_case_A,9,RC_OUT,recompressor outlet,161.96887769214857,20000.0,542.2805809682012,1.9241331214074429
+legacy_case_A,10,PC_IN,pre-compressor inlet   (partial-cooling only -> NaN here),nan,nan,nan,nan
+legacy_case_A,11,PC_OUT,pre-compressor outlet  (partial-cooling only -> NaN here),nan,nan,nan,nan

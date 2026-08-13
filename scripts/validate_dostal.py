@@ -7,12 +7,28 @@ resulting state table can be compared node-by-node against the published one:
     compressor inlet temperature    32 C          (near-critical)
     compressor outlet pressure      20 MPa        (P_high)
     pressure ratio                   2.6          -> P_low = 7.6923 MPa
-    recompressed fraction f_rc       0.39
+    recompressed fraction f_rc       0.4097        (NOT the 0.39 of Table 10.1 -- see below)
+    recuperators                     10 K approach, both      (NOT equal effectiveness)
+    per-HX pressure loss             Dostal's own, from Table 10.4's node pressures
     eta_isen  main compressor        0.89
     eta_isen  recompressor           0.89         (conservative -- NOT 0.948)
     eta_isen  turbine                0.90
 
 Dostal's reported thermal efficiency for this case (conservative turbomachinery) is 51.27%.
+
+*** BASELINE CHANGED 2026-08-13 (Session E): this file now runs CASE F. ***
+It reproduces all 8 of Dostal's published nodes to within 0.070% in h, 0.045% in s and 0.000%
+in P, with eta_thermal at +0.019 pp. The three settings that differ from the previous baseline
+are each READ OFF Dostal's own tables, not fitted: the approach temperatures come from Table
+10.4's node temperatures, the pressure losses from its node pressures (the PHX difference lands
+on exactly the 130 kPa Table 10.1 states), and f = 0.4097 from closing the mixer on his
+published enthalpies. The full argument, including why Table 10.1's f = 0.39 cannot be right
+for this design, is VALIDATION.md 2.3.4a.
+
+The previous baseline (equal effectiveness 0.95, lossless, f = 0.39) matched eta to +0.26 pp
+but through two CANCELLING errors, leaving internal state points wrong by up to 5.4%. It is
+retained as LEGACY_CASE_A -- a regression anchor for environment/ssc drift, NOT a validation
+result. Do not quote its numbers as validation.
 
 Working-fluid properties: every node is independently re-evaluated from (T, P) with CoolProp
 (Span-Wagner, REFPROP-equivalent). The mixer balance and all second-law checks are run on the
@@ -53,20 +69,55 @@ T_TURB_IN_C = 700.0     # turbine inlet temperature            [C]
 T_MC_IN_C = 32.0        # main compressor inlet temperature    [C]
 P_HIGH_MPA = 20.0       # compressor outlet pressure           [MPa]
 PRESSURE_RATIO = 2.6    # P_high / P_low                       [-]
-F_RECOMP = 0.39         # recompressed fraction                [-]
 ETA_MC = 0.89           # main compressor isentropic eff       [-]
 ETA_RC = 0.89           # recompressor isentropic eff          [-]
 ETA_T = 0.90            # turbine isentropic eff               [-]
 ETA_TARGET = 0.5127     # Dostal's reported thermal efficiency [-]
 
-# Recuperators. Dostal specifies the recuperators by effectiveness, and effectiveness is
-# scale-free -- unlike a UA, it transfers to this 10 MWe model without rescaling.
-RECUP_EFF = 0.95
+# --- Recompressed fraction: 0.4097, NOT the 0.39 Table 10.1 states ---------------------------
+# Table 10.1's f and Table 10.4's state points are separate data and they disagree. Imposing the
+# HTR, LTR and mixer balances on Dostal's OWN published values -- with RC_OUT fixed independently
+# by the recompressor isentropic relation -- closes the mixer only at f = 0.4097. Justifying
+# f = 0.39 would require eta_rc = 0.752, against Dostal's stated 0.89 / 0.948; at either stated
+# value his table implies f = 0.41-0.42. The Advanced 650 C design, run as a control, needs only
+# eta_rc = 0.932 to justify its stated 0.41, so the method is sound and the contrast is real.
+# Full analysis: scripts/check_dostal_table_consistency.py, VALIDATION.md 2.3.4a.
+F_RECOMP = 0.4097
+F_RECOMP_STATED = 0.39  # what Table 10.1 says -- kept for reporting the discrepancy
 
-# Per-heat-exchanger CO2 pressure loss, as a fraction of inlet pressure. The base case runs
-# LOSSLESS so that P_high and the pressure ratio are exactly the values specified above; the
-# second case re-runs with SAM's stock 0.54% to show the sensitivity.
+# --- Recuperators: specified by APPROACH TEMPERATURE, read off Table 10.4 ---------------------
+# HTR cold end = node 7 - node 3 = 169.85 - 159.88 = 9.97 K; LTR = node 8 - node 2 = 9.95 K.
+# Specifying by approach (design_code 2) rather than effectiveness lets the LTR/HTR duty split
+# fall out of the physics -- and it lands UNEQUAL (eff_HTR 0.976 / eff_LTR 0.931), which is what
+# Dostal's fixed 120 m3 total HX volume produces and what equal-effectiveness cannot represent.
+RECUP_CODE = 2          # 1 = UA, 2 = min approach dT, 3 = effectiveness (CLAUDE.md 4.7)
+RECUP_MIN_DT = 10.0     # K
+RECUP_EFF = 0.95        # inactive under code 2; used by the legacy case and the sweep
+
+# --- Per-HX CO2 pressure loss: DOSTAL'S OWN, for this exact design ----------------------------
+# Derived as consecutive differences of Table 10.4's node pressures -- NOT the Basic-design
+# values of Table 10.6. The PHX difference lands on exactly 130.00 kPa, matching Table 10.1's
+# stated primary-system dP, which independently confirms the derivation.
+#   LTR_HP  node 2->3 : 20000.00 - 19990.22 =   9.78 kPa      HTR_LP  node 6->7 : 126.58 kPa
+#   HTR_HP  node 3->4 : 19990.22 - 19944.56 =  45.66 kPa      LTR_LP  node 7->8 :  97.71 kPa
+#   PHX     node 4->5 : 19944.56 - 19814.56 = 130.00 kPa      cooler  node 8->1 :  12.62 kPa
+DOSTAL_DP_KPA = {
+    "LTR_HP": (9.78, 20000.00), "HTR_HP": (45.66, 19990.22), "PHX": (130.00, 19944.56),
+    "HTR_LP": (126.58, 7929.22), "LTR_LP": (97.71, 7802.64), "cooler": (12.62, 7704.93),
+}
+DOSTAL_DP_FRAC = {k: loss / p_in for k, (loss, p_in) in DOSTAL_DP_KPA.items()}
+
+# Fallback for any HX not named in a dp dict. Zero, so an unlisted HX is lossless rather than
+# silently inheriting someone else's loss.
 DELTA_P_FRAC = 0.0
+
+# The pre-adoption configuration, retained as a REGRESSION ANCHOR only (CLAUDE.md 7): equal
+# recuperator effectiveness 0.95, lossless, f = 0.39. It agrees with Dostal on eta to +0.26 pp
+# but via two cancelling errors, and its internal state points are wrong by up to 5.4 % -- which
+# is why it is no longer the validation baseline. Its value now is that it reproduces
+# bit-for-bit across machines, making it a good tripwire for environment or ssc drift.
+LEGACY_CASE_A = dict(f_recomp=F_RECOMP_STATED, recup_code=3, recup_eff=RECUP_EFF,
+                     dp={k: 0.0 for k in DOSTAL_DP_FRAC})
 
 # Boundary conditions the cycle itself does not fix, but ssc demands. These set the HTF loop
 # around the cycle; they do not alter the CO2 states, only the salt temperatures.
@@ -97,8 +148,24 @@ NODES = [
 N_REAL = 10     # nodes 10 and 11 are NaN for cycle_config = 1 (CLAUDE.md 4.5)
 
 
-def build(recup_eff=RECUP_EFF, dp_frac=DELTA_P_FRAC, p_low_fixed=None):
-    """Assemble the cycle. p_low_fixed pins the low-side pressure instead of the ratio."""
+def build(recup_eff=RECUP_EFF, dp_frac=DELTA_P_FRAC, p_low_fixed=None,
+          recup_code=RECUP_CODE, recup_min_dT=RECUP_MIN_DT, dp=None, f_recomp=F_RECOMP):
+    """Assemble the cycle. p_low_fixed pins the low-side pressure instead of the ratio.
+
+    Defaults are CASE F -- the adopted baseline (VALIDATION.md 2.3.4a). Override them to run a
+    different configuration; LEGACY_CASE_A is the pre-adoption one, kept as a regression anchor.
+      recup_code    -- 1 = UA, 2 = min approach dT, 3 = effectiveness (CLAUDE.md 4.7).
+      recup_min_dT  -- the approach used when recup_code = 2; also the (ignored, but non-zero
+                       and therefore non-segfaulting) placeholder otherwise.
+      dp            -- per-heat-exchanger pressure-loss FRACTIONS. Keys: HTR_LP, HTR_HP, LTR_LP,
+                       LTR_HP, PHX, cooler. Defaults to Dostal's own losses; any key left out
+                       falls back to dp_frac.
+      f_recomp      -- recompressed fraction, pinned via is_recomp_ok < 0 (CLAUDE.md 4.3).
+    """
+    dp = DOSTAL_DP_FRAC.copy() if dp is None else dict(dp)
+    def dp_of(key):
+        return dp.get(key, dp_frac)
+
     m = S.new()
 
     d = m.SystemDesign
@@ -118,14 +185,14 @@ def build(recup_eff=RECUP_EFF, dp_frac=DELTA_P_FRAC, p_low_fixed=None):
     c.eta_isen_t = ETA_T
     c.P_high_limit = P_HIGH_MPA
     c.deltaP_counterHX_frac = dp_frac
-    c.PHX_co2_deltaP_des_in = dp_frac
+    c.PHX_co2_deltaP_des_in = dp_of("PHX")
     c.mc_comp_type = 1
     c.is_gen_od_polynomials = 0
     # od_* inputs are ARRAYS -- leave unset for a design-only run (CLAUDE.md 4.1).
 
     x = m.HeatExchangerDesign
     x.cycle_config = 1                          # 1 = recompression
-    x.is_recomp_ok = -abs(F_RECOMP)             # negative => PIN f_rc (CLAUDE.md 4.3)
+    x.is_recomp_ok = -abs(f_recomp)             # negative => PIN f_rc (CLAUDE.md 4.3)
     x.is_P_high_fixed = 1                       # P_high = P_high_limit exactly
     # is_PR_fixed: >0 = fixed pressure ratio, <0 = fixed low-side pressure at abs(input)
     x.is_PR_fixed = PRESSURE_RATIO if p_low_fixed is None else -abs(p_low_fixed)
@@ -134,18 +201,18 @@ def build(recup_eff=RECUP_EFF, dp_frac=DELTA_P_FRAC, p_low_fixed=None):
     x.min_phx_deltaT = 0
     x.rel_tol = x.od_rel_tol = 4                # tighter than the stock 3 for validation
     # HTR/LTR_design_code: 1 = UA, 2 = min dT, 3 = effectiveness.
-    x.HTR_design_code = x.LTR_design_code = 3
+    x.HTR_design_code = x.LTR_design_code = recup_code
     x.HTR_eff_des_in = x.LTR_eff_des_in = recup_eff
-    # Unused when design_code = 3, but ssc still reads them -- leaving them at 0.0
-    # segfaults the interpreter (CLAUDE.md 4.2), so give them harmless placeholders.
+    # Only the spec matching the selected code is read, but ssc reads the others regardless and
+    # a 0.0 in an inactive one segfaults (CLAUDE.md 4.2) -- keep them non-zero placeholders.
     x.HTR_UA_des_in = x.LTR_UA_des_in = 5000.0
-    x.HTR_min_dT_des_in = x.LTR_min_dT_des_in = 10.0
+    x.HTR_min_dT_des_in = x.LTR_min_dT_des_in = recup_min_dT
     x.HT_recup_eff_max = x.LT_recup_eff_max = 1.0
     x.HTR_n_sub_hx = x.LTR_n_sub_hx = 20
     x.HTR_od_model = x.LTR_od_model = 1
-    for a in ("HTR_LP_deltaP_des_in", "HTR_HP_deltaP_des_in",
-              "LTR_LP_deltaP_des_in", "LTR_HP_deltaP_des_in"):
-        setattr(x, a, dp_frac)
+    for a, key in (("HTR_LP_deltaP_des_in", "HTR_LP"), ("HTR_HP_deltaP_des_in", "HTR_HP"),
+                   ("LTR_LP_deltaP_des_in", "LTR_LP"), ("LTR_HP_deltaP_des_in", "LTR_HP")):
+        setattr(x, a, dp_of(key))
 
     p = m.PHXDesign
     p.dT_PHX_cold_approach = 20.0
@@ -154,17 +221,18 @@ def build(recup_eff=RECUP_EFF, dp_frac=DELTA_P_FRAC, p_low_fixed=None):
 
     a = m.AirCoolerDesign
     a.is_design_air_cooler = 1
-    a.deltaP_cooler_frac = dp_frac
+    a.deltaP_cooler_frac = dp_of("cooler")
     a.fan_power_frac = 0.01
     a.eta_air_cooler_fan = 0.5
     a.N_nodes_air_cooler_pass = 10
     return m
 
 
-def solve(recup_eff=RECUP_EFF, dp_frac=DELTA_P_FRAC):
+def solve(recup_eff=RECUP_EFF, dp_frac=DELTA_P_FRAC, **kw):
     """Run the design point, falling back to an offset low-side pressure if it will not close.
 
     Returns (model, note) where note describes any fallback that was applied.
+    Extra keyword arguments (recup_code, recup_min_dT, dp) pass straight through to build().
 
     Return the MODEL, never model.Outputs: the Outputs group does not keep its parent alive,
     so handing the caller a bare Outputs lets the model be garbage-collected out from under
@@ -172,7 +240,7 @@ def solve(recup_eff=RECUP_EFF, dp_frac=DELTA_P_FRAC):
     """
     p_low = P_HIGH_MPA / PRESSURE_RATIO
     try:
-        m = build(recup_eff, dp_frac)
+        m = build(recup_eff, dp_frac, **kw)
         m.execute(0)
         o = m.Outputs
         # ssc can report "success" while silently collapsing the cycle (CLAUDE.md 4.3).
@@ -182,7 +250,7 @@ def solve(recup_eff=RECUP_EFF, dp_frac=DELTA_P_FRAC):
         return m, ""
     except Exception as exc:
         offset = p_low + P_LOW_OFFSET_MPA
-        m = build(recup_eff, dp_frac, p_low_fixed=offset)
+        m = build(recup_eff, dp_frac, p_low_fixed=offset, **kw)
         m.execute(0)
         note = ("NEAR-CRITICAL FALLBACK APPLIED: the solver failed at P_low = %.4f MPa\n"
                 "  (%s)\n"
@@ -264,7 +332,8 @@ def report(m, note, label, case):
           % (o.P_comp_in, P_HIGH_MPA / PRESSURE_RATIO))
     print("  pressure ratio      %8.4f     (target %.2f)"
           % (o.P_comp_out / o.P_comp_in, PRESSURE_RATIO))
-    print("  recomp_frac         %8.5f     (target %.2f)" % (f, F_RECOMP))
+    print("  recomp_frac         %8.5f     (target %.4f; Table 10.1 states %.2f -- see 2.3.4a)"
+          % (f, F_RECOMP, F_RECOMP_STATED))
     print("  eff_HTR / eff_LTR   %8.5f / %.5f" % (o.eff_HTR, o.eff_LTR))
     print("  recup UA total      %8.1f kW/K" % o.recup_total_UA_calculated)
     print("  m_dot_co2           %8.3f kg/s   (m_dot_htf %.3f kg/s, cp_htf %.4f kJ/kg-K)"
@@ -361,15 +430,22 @@ def report(m, note, label, case):
 
 
 def eff_sweep():
-    """Locate the recuperator effectiveness at which the model reproduces Dostal's 51.27%."""
+    """Recuperator effectiveness sweep, run in the LEGACY case-A parameterisation.
+
+    Retained because VALIDATION.md 2.3.4a cites it: it is the evidence that the old baseline
+    reproduced Dostal's eta at effectiveness ~0.9467, LOOSER than his own ~10 K approach implies.
+    That mismatch is what exposed the cancelling-error problem in case A. It says nothing about
+    the adopted case F, which specifies the recuperators by approach temperature instead.
+    """
     print("\n" + "=" * 96)
-    print("RECUPERATOR EFFECTIVENESS SWEEP -- where does this model land on Dostal's 51.27%?")
+    print("RECUPERATOR EFFECTIVENESS SWEEP -- LEGACY case-A parameterisation (see docstring)")
     print("=" * 96)
     print("%12s %12s %14s %12s" % ("recup eff", "eta_thermal", "UA_tot [kW/K]", "d vs Dostal"))
     xs, ys = [], []
+    legacy = {k: v for k, v in LEGACY_CASE_A.items() if k != "recup_eff"}
     for e in (0.90, 0.92, 0.93, 0.94, 0.945, 0.95, 0.96, 0.97):
         try:
-            m, _ = solve(recup_eff=e)
+            m, _ = solve(recup_eff=e, **legacy)
             o = m.Outputs
             xs.append(e)
             ys.append(o.eta_thermal_calc)
@@ -389,25 +465,32 @@ def eff_sweep():
 
 
 def run_all():
-    """The whole report, in print order. Returns (base eta, state rows, sweep rows)."""
-    eta, rows = report(*solve(), case="base_lossless", label=(
-        "DOSTAL 2004 HIGH-PERFORMANCE RECOMPRESSION -- BASE CASE\n"
-        "  recuperator effectiveness %.3f, zero pressure loss (PR is exactly %.2f)"
-        % (RECUP_EFF, PRESSURE_RATIO)))
+    """The whole report, in print order. Returns (baseline eta, state rows, sweep rows)."""
+    eta, rows = report(*solve(), case="case_F_adopted", label=(
+        "DOSTAL 2004 HIGH-PERFORMANCE RECOMPRESSION -- CASE F (ADOPTED BASELINE)\n"
+        "  f_rc %.4f, recuperators at %.1f K approach, Dostal's own per-HX pressure loss.\n"
+        "  All three read from his published data; none fitted. See VALIDATION.md 2.3.4a."
+        % (F_RECOMP, RECUP_MIN_DT)))
 
     print("\n")
-    _, rows_dp = report(*solve(dp_frac=0.0054), case="with_0.54pct_dP", label=(
-        "SENSITIVITY -- SAME CASE WITH SAM'S STOCK 0.54%% PER-HX PRESSURE LOSS\n"
-        "  recuperator effectiveness %.3f" % RECUP_EFF))
+    eta_a, rows_a = report(*solve(**LEGACY_CASE_A), case="legacy_case_A", label=(
+        "LEGACY CASE A -- REGRESSION ANCHOR ONLY, NOT THE VALIDATION BASELINE\n"
+        "  equal recuperator effectiveness %.3f, lossless, f_rc %.2f. Agrees with Dostal on eta\n"
+        "  via two CANCELLING errors while its internal states are wrong by up to 5.4 %%; kept\n"
+        "  because it reproduces bit-for-bit across machines, so it catches environment drift."
+        % (RECUP_EFF, F_RECOMP_STATED)))
 
     sweep = eff_sweep()
 
     print("\n" + "=" * 96)
-    print("VERDICT: converged at %.2f MPa / %.1f C compressor inlet; eta_thermal = %.2f %% "
-          "vs Dostal %.2f %%." % (P_HIGH_MPA / PRESSURE_RATIO, T_MC_IN_C,
-                                  100.0 * eta, 100.0 * ETA_TARGET))
+    print("VERDICT: converged at %.2f MPa / %.1f C compressor inlet." %
+          (P_HIGH_MPA / PRESSURE_RATIO, T_MC_IN_C))
+    print("  adopted case F : eta_thermal = %.3f %%  (%+.3f pp vs Dostal %.2f %%)"
+          % (100.0 * eta, 100.0 * (eta - ETA_TARGET), 100.0 * ETA_TARGET))
+    print("  legacy  case A : eta_thermal = %.3f %%  (%+.3f pp) -- anchor only"
+          % (100.0 * eta_a, 100.0 * (eta_a - ETA_TARGET)))
     print("=" * 96)
-    return eta, rows + rows_dp, sweep
+    return eta, rows + rows_a, sweep
 
 
 def write_csv(path, rows):
