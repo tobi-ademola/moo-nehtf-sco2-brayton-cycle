@@ -270,6 +270,81 @@ m.HeatExchangerDesign.is_P_high_fixed = 1      # P_high = P_high_limit exactly
 m.HeatExchangerDesign.is_PR_fixed     = 2.6    # >0 = fixed PR, <0 = fixed LP at abs(value)
 ```
 
+### 4.11 The UDPC table has TWO shapes and the two modules disagree about which
+
+The map generator and the tower do **not** speak the same table format, and nothing in either
+API says so. `Sco2CspUdPcTables` emits **three per-axis tables, 13 columns each**
+(`T_htf_ind`, `m_dot_htf_ND_ind`, `T_amb_ind`); `TcsmoltenSalt.UserDefinedPowerCycle.ud_ind_od`
+wants **one combined table, 7 columns**. This is not a version skew to route around — ssc's own
+`N_udpc_common::split_ind_tbl()` splits the combined table into exactly those three. Writing the
+bridge means writing the **inverse of that split** (`scripts/build_udpc_map.py`).
+
+```
+per-axis (13 col):  col 0 = swept variable
+                    cols 1-3 W_gross | 4-6 Q_HTF | 7-9 W_cooling | 10-12 m_dot_water
+                    each triple ordered [low, DESIGN, high] of a PAIRED variable
+combined (7 col):   [T_htf, m_dot_htf_ND, T_amb, W_gross_ND, Q_HTF_ND, W_cool_ND, m_water_ND]
+```
+
+**Block structure, read off the tower's own installed default `ud_ind_od` (180×7) in this
+environment — verify it this way rather than trusting any write-up, including this one:**
+
+| block | swept (20 values) | 3 levels of | held at design |
+|---|---|---|---|
+| 0 | `T_htf` | `m_dot` — 0.3 / **1.0** / 1.2 | `T_amb` = 43 |
+| 1 | `m_dot` | `T_amb` — 0 / **43** / 55 | `T_htf` = 574 |
+| 2 | `T_amb` | `T_htf` — 500 / **574** / 580 | `m_dot` = 1.0 |
+
+The **level is the outer loop**, the swept value the inner. Stacking order is
+`T_htf → m_dot → T_amb` (`ud_power_cycle.h`). Do not reorder.
+
+⚠ **The cooling column arrives UNNORMALISED** — order 1e-3 at design, while every other
+response is 1.0 there. Divide it by its own design value when building the combined table; the
+magnitude is restored on the tower side by `ud_f_W_dot_cool_des`. Miss this and the cooling
+parasitic is wrong by three orders of magnitude with nothing flagging it.
+
+### 4.12 `ud_ind_od` carries SHAPES only — set the design magnitudes or stay on the steam cycle
+
+The combined table is entirely normalised. The scale travels separately, and if you do not set
+it the tower **silently keeps its steam-Rankine defaults** — verified in this environment as
+`design_eff = 0.412`, `P_ref = 115.0` MW. Everything runs; the sCO₂ block is just mis-scaled.
+
+```python
+m.PowerCycle.pc_config                            = 1     # user-defined cycle
+m.UserDefinedPowerCycle.ud_is_sco2_regr           = 1     # sCO2-aware regression
+m.UserDefinedPowerCycle.ud_ind_od                 = rows  # the 7-column combined table
+m.UserDefinedPowerCycle.ud_f_W_dot_cool_des       = ...   # % of design gross used by cooling
+m.UserDefinedPowerCycle.ud_m_dot_water_cool_des   = 0.0   # dry-cooled
+m.SystemDesign.design_eff                         = ...   # <- or you keep 0.412
+m.SystemDesign.P_ref                              = ...   # <- or you keep 115 MW
+```
+
+### 4.13 `Singleowner.from_existing()` must be called BEFORE `execute()`
+
+The financial model shares the CSP model's data container, so it has to exist before the CSP run
+populates the 8760-hour `gen` array. Create it afterwards and it sees a single record:
+
+```
+invalid number of gen records (1)
+```
+
+```python
+fin = Singleowner.from_existing(model, "MSPTSingleOwner")   # FIRST
+model.execute(0); fin.execute(0)                            # then both
+```
+
+### 4.14 A negative nameplate is not an error to ssc
+
+`system_capacity` is the design **net** output, and it can come out **negative** when the
+pumping parasitic exceeds gross. ssc does not raise, does not warn, still returns a full 8760
+`gen` array and a perfectly plausible `annual_energy`. Observed at −52,858 kW on a chloride case
+whose receiver pump wanted 162 MW (`results/htf_sam_bridge_*`). **Screen every run on
+`system_capacity > 0`** before believing its annual number.
+
+Related trap in the same output set: **`capacity_factor` is not comparable across cases whose
+design changes.** Its denominator is the per-case nameplate, so CF *rises* while annual energy
+*falls*. Compare `annual_energy` and `system_capacity`, which share a fixed basis.
+
 ---
 
 ## 5. WEATHER FILES AVAILABLE
@@ -313,6 +388,45 @@ NaCl–KCl–MgCl₂ work, though neither is the ternary eutectic.
 
 Cover the **full operating temperature span** with your rows — ssc interpolates and will not
 extrapolate gracefully.
+
+**The input names, and the one unit that will bite you.** The table goes on the *receiver* group,
+not a storage group — there is only **one** fluid definition and it serves receiver, field and
+TES alike (`Outputs.dens_store_htf_at_T_ave` comes off the same table):
+
+```python
+m.TowerAndReceiver.rec_htf        = 50      # 17 = nitrate default
+m.TowerAndReceiver.field_fl_props = rows    # the 7-column table
+```
+
+⚠ **Column 1 is kJ/(kg·K), not J/(kg·K).** `scripts/nanofluid_properties.py` works in J/(kg·K),
+so the export divides by 1000. Omit that and every energy balance is 1000× out with no error
+raised — `scripts/htf_sam_bridge.py` asserts cp lands in 0.1–10 rather than trusting it.
+
+**Verified 2026-08-13 (Session E), `scripts/htf_sam_bridge.py`:** ssc **accepts** the
+nano-chloride table via `rec_htf = 50`, stores it with **zero** round-trip deviation across six
+cases, and the annual model solves on it. **The nano-chloride couples INSIDE SAM; no external
+coupling layer is needed** — this closes the §4/§10 open flag in `MASTER_PLAN.md` and confirms
+`DECISIONS.md` D2's mechanism.
+
+⚠ **Acceptance is not validity** — see §4.14. A chloride case at the *nitrate* hot temperature
+solved happily with a **negative nameplate**, because the chloride melts at 401.4 °C, cannot use
+a 290 °C cold tank, and the resulting narrow loop ΔT drove the receiver pump to 162 MW. Design
+receiver pump power against loop ΔT, all else equal:
+
+| loop ΔT | W_pump,des | nameplate |
+|---|---|---|
+| 124 K | **162.30 MW** | **−52,858 kW (infeasible)** |
+| 250 K | 27.04 MW | 82,923 kW |
+| 284 K (nitrate) | 8.49 MW | 101,663 kW |
+
+Roughly cubic, as mass flow ~ 1/ΔT in a friction-dominated loop. **Put a floor under T_hot in any
+sweep of decision variables #5/#6** rather than letting the optimizer discover it.
+
+**Grid density barely matters, and the reason is worth knowing.** ρ, cp and k are *exactly linear*
+in T in the A1 correlation set, so linear interpolation on any grid reproduces them to machine
+precision; only μ (exponential) and h (quadratic) can differ at all. Dropping from 6 rows to the
+3-row minimum across the same span moved annual energy by **0.001 %**. A test that under-covers
+the span therefore proves nothing about extrapolation — it is inconclusive by construction.
 
 ---
 
