@@ -103,7 +103,13 @@ Decision vector **X = [SM, tTES, φ, dp, THTF, ṁHTF, Tt,in, PH, PR, fRC]**
 
 - The supervisor's attached paper (Atif & Al-Sulaiman 2018, _J. Energy Eng._) is effectively an **exergy template** for this exact topology: recompression sCO₂ + two-tank molten salt + central receiver. It gives component-level exergy-destruction equations (compressor ×2, turbine, HTR, LTR, cooler, storage HX, hot/cold tanks; Eqs. 41–56).
 - Therefore the **algebra is mostly transcription**, not derivation → the "too complex" risk is lower than it looks.
-- ⚠️ **THE REAL RISK:** does PySAM's sCO₂ model expose **per-state entropy** (esp. regenerator intermediate nodes 7/8/9)? If only lumped efficiencies are exposed, reconstruct states via **CoolProp** (+~1 day).
+- ✅ ~~**THE REAL RISK:** does PySAM's sCO₂ model expose **per-state entropy**?~~ **RISK CLOSED
+  2026-08-13.** Entropy is exposed natively (Session B), *and* a full exergy layer has now been
+  built and verified on it (Session E, `scripts/exergy_layer_check.py`): per-node exergy, per
+  component ĖD all positive, **HTR-dominant at 41.4 %**, and the cycle-wide balance
+  Ex_in = W_net + ΣĖD closing to **1.5e-04 relative**. The **CoolProp reconstruction (+~1 day) is
+  not needed.** ⚠ Report ĖD at **T_amb = 299.15 K**, not at the node-1 reference — see
+  `DECISIONS.md` D1.
 - **Working rule:** build the model **exergy-ready** — carry **h AND s at every state point** from the start. Switch on the exergy _reporting layer_ last. This keeps novelty open without gating the critical path.
 - **Fallback:** if the entropy-exposure check fails and CoolProp reconstruction eats the buffer, exclude exergy (supervisor-approved) and keep energy/hydraulic/economic.
 
@@ -203,8 +209,10 @@ Ordered. Each item blocks the ones below it. **Nothing in §12 competes with the
 3. **Wire the decision vector** — expose all 10 variables of §3 as model inputs with validated
    ranges, so screening can drive them.
 4. **Morris screening** (§7) over the 10 variables. ← **THE GUARANTEED DELIVERABLE.**
-5. **Exergy reporting layer** (§5) — build last, switch on last; the state points it needs are
-   already validated, so this is now low-risk.
+5. **Exergy reporting layer** (§5) — **de-risked ahead of time**: the arithmetic is already
+   verified end-to-end by `scripts/exergy_layer_check.py` on the standalone cycle. What remains is
+   wiring it to the *integrated* model and adding the receiver/TES/tank ĖD terms, not proving the
+   method. Still build it last.
 6. **NSGA-II MOO** (§7) — stretch only.
 
 ---

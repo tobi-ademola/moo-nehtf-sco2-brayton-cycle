@@ -449,3 +449,55 @@ tables (cheapest, no new literature, covers the T_t,in span the optimizer will e
 
 **Next.** `MASTER_PLAN.md` §11, in order — starting at item 1 (salt/SAM reconciliation), then the
 `Sco2CspUdPcTables` → `TcsmoltenSalt` bridge.
+
+---
+
+## 2026-08-13 — Code lane — Exergy layer verified end-to-end; MASTER_PLAN §5's +1-day risk CLOSED
+
+**Goal.** Prove the exergy reporting layer is arithmetically sound on data the model already
+carries, before `MASTER_PLAN.md` §11 item 5 builds it for real. Session B established entropy is
+*exposed*; it never demonstrated a correct layer could be *built* on it. This closes that gap.
+
+**What ran.** `scripts/exergy_layer_check.py` (**new**) on the adopted case F baseline.
+`validate_dostal.py` refactored: the per-component second-law physics extracted into
+`entropy_generation()` so it is written once and shared, rather than duplicated into the new
+script. Baseline re-run afterwards — case F (η 0.51289, Sgen +10.22522) and legacy case A
+(η 0.51532, Sgen +9.91403) both **bit-for-bit unchanged**, exit 0.
+
+**Results** (`results/exergy_layer_check_20260813T023227Z.{md,csv}`). **All five checks pass.**
+
+1. e = 0 at the reference node, **exactly**; exergy maximal at `TURB_IN` (426.88 kJ/kg); every
+   component ĖD > 0 (8 of 8).
+2. **HTR is the largest destroyer at 1265.62 kW = 41.4 %**, then turbine 17.1 %, precooler 15.2 %,
+   LTR 11.4 %. This matches **Battisti 2023** (`SOURCES.md` F2) — so the deferred exergy
+   cross-check from `MASTER_PLAN.md` §12 item 2 is **already satisfied for the cycle**, at no cost.
+3. **The cycle-wide exergy balance closes**: Ex_in(salt) 13060.82 = W_net 10000.00 + ΣĖD 3058.87,
+   residual **1.95 kW = 1.5e-04 relative**. This is the load-bearing check — it exercises every
+   *h*, every *s*, both mass flows, the salt properties and the work terms simultaneously, so it
+   catches scaling/unit errors that per-component sign checks cannot (cf. the 1000× mass-flow trap,
+   `CLAUDE.md` §4.9). **Second-law efficiency 76.56 %.**
+4. **`MIX` destroys 0.01 kW — essentially nothing.** That is the second-law signature of case F's
+   near-isenthalpic junction; the same term was 16.14 kW under legacy case A. An *independent*
+   confirmation that the adopted baseline's mixing point is right.
+
+**A correction this surfaced that affects every downstream ĖD number.** Two T₀ values are in play
+and they are not interchangeable. The requested per-node reference (Dostal node 1, 305.15 K at
+**7.69 MPa**) is a **reference state, not a dead state** — the cycle cannot reject heat to
+7.69 MPa, and e = 0 there is true by construction, so that check tests the wiring, not the physics.
+Gouy-Stodola ĖD = T₀·Sgen is only meaningful at the **environment** temperature,
+**T_amb = 299.15 K**. Using node 1 instead inflates every ĖD by ~2 % and leaves the exergy balance
+open by **−188.5 kW (−1.46 %)** rather than closing to 1.95 kW. The component *ranking* is
+identical either way — **so no sanity check catches this; only the balance does.** Both are
+computed and printed side by side so the distinction cannot be lost.
+
+**Consequence.** `MASTER_PLAN.md` §5's CoolProp-reconstruction fallback (+~1 day) is **closed, not
+merely unlikely**, and `DECISIONS.md` D1's fallback can be retired. `min ĖD` — a named primary
+objective — is confirmed computable from data already carried. §11 item 5 is now wiring work
+against the integrated model, not method risk.
+
+**Docs updated.** `VALIDATION.md` new **§2.5** (node exergy + ĖD tables, the T₀ warning);
+`DECISIONS.md` D1 extended with the execution evidence and the T₀ correction; `MASTER_PLAN.md` §5
+risk marked closed and §11 item 5 re-scoped.
+
+**Next.** Unchanged — `MASTER_PLAN.md` §11 item 1, the salt/SAM reconciliation, which is still the
+live blocker on Objective 2.

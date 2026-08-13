@@ -298,6 +298,40 @@ def coolprop_states(T_C, P_MPa):
     return h, s
 
 
+def entropy_generation(o, h, s, mdot, mdot_htf, f, T_amb_K):
+    """Per-component entropy generation rate [kW/K], plus the auxiliary quantities it needs.
+
+    Adiabatic components are simply m*(s_out - s_in). The precooler and the PHX exchange heat
+    with a reservoir, so they carry a Q/T term as well.
+
+    Shared with scripts/exergy_layer_check.py so the second-law physics is written once. The
+    returned aux dict carries q_cool, cp_htf and the HTF end temperatures, which the exergy
+    balance needs to compute the exergy actually delivered by the salt.
+    """
+    q_cool = mdot * (1.0 - f) * (h[8] - h[0])           # kW rejected to ambient
+    # Salt side of the PHX, treated as an incompressible stream: mean cp backed out of the
+    # duty so the entropy term uses exactly the enthalpy change ssc solved for.
+    T_htf_hot_C = T_TURB_IN_C + DT_PHX_HOT_APPROACH
+    T_htf_hot_K = T_htf_hot_C + 273.15
+    T_htf_cold_K = o.T_htf_cold_des + 273.15
+    cp_htf = o.q_dot_PHX / (mdot_htf * (T_htf_hot_C - o.T_htf_cold_des))
+
+    terms = {
+        "MC   main compressor": mdot * (1 - f) * (s[1] - s[0]),
+        "RC   recompressor":    mdot * f * (s[9] - s[8]),
+        "TURB turbine":         mdot * (s[6] - s[5]),
+        "LTR  low-T recup":     mdot * ((1 - f) * (s[2] - s[1]) + (s[8] - s[7])),
+        "HTR  high-T recup":    mdot * ((s[4] - s[3]) + (s[7] - s[6])),
+        "MIX  mixer":           mdot * (s[3] - ((1 - f) * s[2] + f * s[9])),
+        "COOL precooler":       mdot * (1 - f) * (s[0] - s[8]) + q_cool / T_amb_K,
+        "PHX  primary HX":      mdot * (s[5] - s[4])
+                                + mdot_htf * cp_htf * math.log(T_htf_cold_K / T_htf_hot_K),
+    }
+    aux = {"q_cool": q_cool, "cp_htf": cp_htf,
+           "T_htf_hot_K": T_htf_hot_K, "T_htf_cold_K": T_htf_cold_K}
+    return terms, aux
+
+
 def report(m, note, label, case):
     o = m.Outputs                   # m stays referenced for the whole function -- see solve()
     T = np.array(o.T_state_points)
@@ -380,27 +414,8 @@ def report(m, note, label, case):
     assert err < 1e-2, "mixer does not close -- state-point ordering is not as assumed"
 
     # --- second law, component by component ----------------------------------
-    # Entropy generation rate, kW/K. Adiabatic components: m*(s_out - s_in).
-    # The precooler and the PHX exchange heat with a reservoir, so they carry a Q/T term.
-    q_cool = mdot * (1.0 - f) * (h[8] - h[0])           # kW rejected to ambient
-    # Salt side of the PHX, treated as an incompressible stream: mean cp backed out of the
-    # duty so the entropy term uses exactly the enthalpy change ssc solved for.
-    T_htf_hot_C = T_TURB_IN_C + DT_PHX_HOT_APPROACH
-    T_htf_hot_K = T_htf_hot_C + 273.15
-    T_htf_cold_K = o.T_htf_cold_des + 273.15
-    cp_htf = o.q_dot_PHX / (mdot_htf * (T_htf_hot_C - o.T_htf_cold_des))
-
-    terms = {
-        "MC   main compressor": mdot * (1 - f) * (s[1] - s[0]),
-        "RC   recompressor":    mdot * f * (s[9] - s[8]),
-        "TURB turbine":         mdot * (s[6] - s[5]),
-        "LTR  low-T recup":     mdot * ((1 - f) * (s[2] - s[1]) + (s[8] - s[7])),
-        "HTR  high-T recup":    mdot * ((s[4] - s[3]) + (s[7] - s[6])),
-        "MIX  mixer":           mdot * (s[3] - ((1 - f) * s[2] + f * s[9])),
-        "COOL precooler":       mdot * (1 - f) * (s[0] - s[8]) + q_cool / T_amb_K,
-        "PHX  primary HX":      mdot * (s[5] - s[4])
-                                + mdot_htf * cp_htf * math.log(T_htf_cold_K / T_htf_hot_K),
-    }
+    terms, aux = entropy_generation(o, h, s, mdot, mdot_htf, f, T_amb_K)
+    q_cool = aux["q_cool"]
     print("\nENTROPY GENERATION  (T0 = %.2f K = ambient)" % T_amb_K)
     ok = True
     for k, sgen in terms.items():

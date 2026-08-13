@@ -31,9 +31,41 @@ h AND s at every state point from the start (already happening). Gate only the e
 **reporting layer** behind validation passing; do NOT gate the data collection. This keeps
 novelty open without touching the critical path.
 
-**Fallback (intact).** If node-mapping (see D4) proves messier than expected or the buffer
-collapses, exclude exergy (supervisor-approved) and keep energy / hydraulic / economic. The
-entropy finding removes the only pre-emptive reason to drop it.
+**Fallback (NO LONGER NEEDED — see below).** If node-mapping (see D4) proved messier than
+expected or the buffer collapsed, the plan was to exclude exergy (supervisor-approved) and keep
+energy / hydraulic / economic.
+
+**CONFIRMED BY EXECUTION — 2026-08-13, Session E.** Session B's finding was that entropy *is
+exposed*; it did not demonstrate that a correct exergy layer could be **built** from it. That has
+now been done and checked end-to-end — `scripts/exergy_layer_check.py`,
+`results/exergy_layer_check_20260813T023227Z.{md,csv}`, on the adopted case F baseline. All five
+checks pass:
+
+| Check | Result |
+|---|---|
+| e = 0 at the reference node | exact (0.000e+00) |
+| exergy maximal at the turbine inlet | node 5, 426.88 kJ/kg |
+| every component ĖD > 0 | 8 of 8 |
+| **HTR is the largest single destroyer** | **1265.62 kW = 41.4 %** |
+| **cycle-wide exergy balance closes** | residual **1.95 kW = 1.5e-04 relative** |
+
+The balance — Ex_in(salt) = W_net + ΣĖD — is the load-bearing one: it exercises every *h*, every
+*s*, both mass flows, the salt-side properties and the work terms simultaneously, so it catches
+scaling and unit errors that per-component sign checks cannot. Second-law efficiency comes out at
+**76.56 %**, and the HTR-dominant ranking matches Battisti 2023 (`SOURCES.md` F2) independently.
+
+**Consequence:** the `+~1 day` CoolProp-reconstruction risk in `MASTER_PLAN.md` §5 is **closed,
+not merely unlikely**, and the D1 fallback can be retired. `min ĖD` — a named primary objective —
+is now known to be computable from data the model already carries.
+
+> ⚠ **One correction this exposed, which matters for every ĖD number reported downstream.** Two
+> different T₀ values are in play and they are not interchangeable: the *reference state* for the
+> per-node table (Dostal node 1, 305.15 K at 7.69 MPa) is **not a dead state** — the cycle cannot
+> reject heat to 7.69 MPa. Gouy-Stodola ĖD = T₀·Sgen is only meaningful at the **environment**
+> temperature, T_amb = 299.15 K. Using the wrong one inflates every ĖD by ~2 % and leaves the
+> exergy balance open by **−188.5 kW (−1.46 %)** instead of closing to 1.95 kW. The component
+> *ranking* is identical either way, so this never shows up as a sanity-check failure — only the
+> balance catches it. **Report ĖD at T_amb.**
 
 ---
 

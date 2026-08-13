@@ -502,6 +502,48 @@ HTR hot 85.95 kPa / cold 27.38 kPa; LTR hot 109.35 kPa / cold 11.35 kPa; precool
 > These are boundary-condition MATCHES, not tuning. The goal is to reproduce Dostal's case, then
 > read off residual error. Any diff after matching these is the real model error.
 
+### 2.5 EXERGY LAYER — VERIFIED 2026-08-13 (Session E)
+
+**Script:** `scripts/exergy_layer_check.py` ·
+**Data:** `results/exergy_layer_check_20260813T023227Z.{md,csv}` · case F baseline.
+
+Physical exergy e = (h − h₀) − T₀(s − s₀) at every node, and ĖD = T₀·Sgen per component, computed
+**entirely from data the model already carries** — no CoolProp reconstruction.
+
+| Node | e @T₀ = 305.15 K (kJ/kg) | | Component | Sgen (kW/K) | ĖD (kW) | share |
+|---|---|---|---|---|---|---|
+| `MC_IN` | 0.0000 | | **HTR** | +4.23071 | **1265.62** | **41.4 %** |
+| `MC_OUT` | 18.5119 | | TURB | +1.75154 | 523.97 | 17.1 % |
+| `LTR_HP_OUT` | 58.5392 | | COOL | +1.55023 | 463.75 | 15.2 % |
+| `MIXER_OUT` | 58.6482 | | LTR | +1.16569 | 348.71 | 11.4 % |
+| `HTR_HP_OUT` | 288.6469 | | PHX | +0.59713 | 178.63 | 5.8 % |
+| **`TURB_IN`** | **426.8784** ← max | | RC | +0.56061 | 167.71 | 5.5 % |
+| `TURB_OUT` | 276.6923 | | MC | +0.36927 | 110.47 | 3.6 % |
+| `HTR_LP_OUT` | 32.6753 | | MIX | +0.00003 | 0.01 | 0.0 % |
+| `LTR_LP_OUT` | 5.1906 | | **TOTAL** | **+10.22521** | **3058.87** | 100 % |
+| `RC_OUT` | 58.8056 | | | | | |
+
+All five checks pass: e = 0 at the reference node (exact); exergy maximal at the turbine inlet;
+every ĖD > 0; **HTR-dominant**, matching Battisti 2023 (`SOURCES.md` F2) independently; and the
+cycle-wide balance **Ex_in(salt) = W_net + ΣĖD closing to 1.95 kW = 1.5e-04 relative**.
+**Second-law efficiency 76.56 %.**
+
+The balance is the load-bearing check — it exercises every *h*, every *s*, both mass flows, the
+salt-side properties and the work terms at once, so it catches scaling and unit errors that
+per-component sign checks cannot (cf. the 1000× mass-flow trap, `CLAUDE.md` §4.9).
+
+**`MIX` destroys essentially nothing (0.01 kW)** — the physical signature of case F's
+near-isenthalpic junction. Under legacy case A the same term was 16.14 kW. An independent
+confirmation, from the second law, that the adopted baseline's mixing point is the correct one.
+
+> ⚠ **Two T₀ values, not interchangeable.** The per-node reference above (Dostal node 1, 305.15 K
+> at 7.69 MPa) is a **reference state, not a dead state** — the cycle cannot reject heat to
+> 7.69 MPa, and e = 0 there is true by construction. Gouy-Stodola ĖD is only meaningful at the
+> **environment** temperature **T_amb = 299.15 K**, which is what the ĖD column uses. At the
+> node-1 value instead, every ĖD inflates ~2 % and the exergy balance opens to **−188.5 kW
+> (−1.46 %)**. The ranking is unchanged either way, so **only the balance detects this** —
+> report ĖD at T_amb.
+
 ### 2.6 EXERGY-READINESS BONUS (supports DECISIONS.md D1)
 Dostal gives h AND s at every node → you can compute physical exergy e = (h−h₀) − T₀(s−s₀) at
 each state directly from §2.3.2 and cross-check your model's per-node exergy against a published
