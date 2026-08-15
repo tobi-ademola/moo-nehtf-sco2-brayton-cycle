@@ -51,52 +51,56 @@ cycle ARCHITECTURE and every efficiency, pressure and recuperator specification 
 only the hot-end boundary condition moves, and the resulting design efficiency is reported
 against case F's 0.51289 so the size of that move is visible rather than buried.
 
-*** STATUS 2026-08-13: THE OFF-DESIGN SWEEP DOES NOT CONVERGE AT THE CASE F DESIGN. ***
+*** STATUS 2026-08-14: THE SWEEP CONVERGES. IT IS SLOW. IT WAS NEVER OVER-CONSTRAINED. ***
 
-The design point solves in 0.1 s and is a valid recompression cycle. Turning on the off-design
-sweep (`is_generate_udpc = 1`) then fails to complete in 5-16 minutes at 3^3 OR 5^3.
+*** THE PREVIOUS DIAGNOSIS IN THIS DOCSTRING WAS WRONG AND IS RETAINED BELOW AS A LESSON. ***
 
-*** SEVEN SINGLE-VARIABLE DEVIATIONS FROM CASE F WERE TESTED. NONE OF THEM FIXES IT. ***
-Each was its own run, changing exactly one thing and leaving the rest of case F intact:
+The off-design sweep at the FULL case F design -- every recuperator specified, f_rc pinned at
+0.4097, both pressure levels pinned, rel_tol 4 -- completes and produces a usable map:
 
-    the custom chloride fluid      NO -- the identical sweep on built-in nitrate (htf = 17)
-                                        hangs the same way. Not a property-table problem.
-    pinned f_rc                    NO -- is_recomp_ok = 1 (solver free) still hangs.
-    pinned pressure levels         NO -- is_P_high_fixed = 0, is_PR_fixed = 0 still hangs.
-    rel_tol = 4                    NO -- the stock rel_tol = 3 still hangs.
-    recuperators by min approach   NO -- HTR/LTR_design_code = 3 at case F's OWN produced
-                                        effectivenesses (0.97510 / 0.93098) still hangs.
-    design_method = 3              NO -- method 2 (total UA = 2306.6 kW/K) hangs; method 1
-                                        (target efficiency 0.50) hangs.
-    aggressive sweep corners       NO -- narrowing to m_dot 0.85-1.05, T_amb 15-40 C,
-                                        T_htf 680-710 C still hangs. Not a corner-feasibility
-                                        problem either.
+    case_F, 3 points per axis, sweep ON:  USABLE in 2277.9 s (38.0 min)
+                                          recomp_frac 0.40970, eta 0.50547, tables non-empty
 
-What DOES converge, in 93.6 s, is the whole loose bundle at once: design_method = 1 with a free
-f_rc, free pressures and stock tolerance. It returns **recomp_frac = 0.0** -- collapsed to simple
-recuperated, precisely the failure mode CLAUDE.md §4.3 documents and the same signature as the
-prior project's recorded 0.113.
+    The cycle that comes out is the validated one. Nothing had to be loosened to get it.
 
-    So this is NOT one bad setting. A case-F-style FULLY DETERMINED design -- every recuperator
-    specified, f_rc pinned, both pressure levels pinned -- appears to be over-constrained for
-    UDPC generation: the off-design solver needs degrees of freedom that the validation design
-    deliberately removes. The sweep converges only when the cycle is loose enough to collapse,
-    and the configuration that preserves the validated recompression cycle will not converge.
-    That tension is the finding, and it is unresolved.
+The 2026-08-13 conclusion -- "a fully determined case-F-style design is over-constrained for
+UDPC generation" -- is REFUTED. There is no convergence boundary in {design_method, f_rc
+pinning, pressure pinning, rel_tol}. All five configurations tested with the sweep on converge,
+and the knobs barely move the wall time:
 
-FOR WHOEVER PICKS THIS UP: stop bisecting away from case F -- that direction is exhausted, all
-seven cells are negative. Bisect the other way instead. Start from the known-good loose bundle
-(93.6 s) and re-tighten ONE setting at a time toward case F until it stops converging; the
-boundary is a COMBINATION inside {design_method, f_rc pinning, pressure pinning}, and finding it
-costs ~1.5 min per success against ~5 min per failure, so the reverse direction is also cheaper.
+    case_F        (all tight)          2277.9 s   recomp_frac 0.40970   eta 0.50547
+    F_loose_frc   (f_rc free)          2152.3 s   recomp_frac 0.41067   eta 0.50569
+    F_loose_dm    (design_method 1)    2218.6 s   recomp_frac 0.40970   eta 0.49999
+    F_loose_press (pressures free)     1882.8 s   recomp_frac 0.40970   eta 0.50654
+    F_loose_tol   (rel_tol 3)          1963.3 s   recomp_frac 0.40970   eta 0.50512
 
-If the boundary turns out to exclude a pinned f_rc entirely, that is a real modelling decision
-rather than a bug, and it should go to DECISIONS.md: the map would then have to be generated at
-a solver-chosen f_rc, and the gap against case F's 0.4097 measured and reported rather than
-assumed small -- f_rc is decision variable #10, which the optimiser sweeps anyway.
+*** WHAT ACTUALLY WENT WRONG, BECAUSE IT IS THE REUSABLE LESSON ***
 
-Until that is resolved `--design-only` is the usable mode, and `--selftest` verifies the
-inverse-split transform independently of whether ssc converges at all.
+Every one of the twelve experiments that concluded "still hangs" was capped at 5-16 minutes.
+The sweep needs ~31-38. Not one of them ran long enough to observe a convergence that was
+always going to happen. A dozen negative results, a mechanism invented to explain them, and a
+recorded modelling decision -- all downstream of a timeout that was too short by a factor of 2.
+
+    "Hangs" was never observed. What was observed is "did not finish inside MY timeout", and
+    the two were conflated. A run that has not finished carries NO information until the
+    timeout is justified against a measured completion, and none of the twelve were.
+
+Two further traps that fed the wrong diagnosis, both worth keeping:
+
+  * `design_method = 1` was miscategorised as a LOOSE setting. It is not loose -- it ADDS a
+    constraint, an inverse solve for the total recuperator conductance that hits a target
+    efficiency. Combined with free pressures and a free f_rc it is the slowest configuration
+    of all: it ran 2026 s and then FAILED with a real ssc diagnostic, not a hang --
+        "Can't find a value of total recuperator conductance that achieves the target cycle
+         efficiency. Check design parameters."
+    So the one configuration previously believed to be the known-good control is the only one
+    that genuinely does not work.
+
+  * The 93.6 s / `recomp_frac = 0.0` run recorded on 2026-08-13 has NEVER been reproduced. The
+    configuration it describes fails as above. Do not treat that number as a control.
+
+`--selftest` still verifies the inverse-split transform independently of ssc, and `--design-only`
+(0.1 s) remains the fast path for checking the cycle without paying for the sweep.
 
 Inputs:  scripts/nanofluid_properties.py (the PHX sees the same chloride as the tower loop);
          scripts/validate_dostal.py for the case F constants, imported rather than retyped.
@@ -261,8 +265,46 @@ def check_design(m):
         "eff_HTR": o.eff_HTR, "eff_LTR": o.eff_LTR,
         "T_htf_cold_des_C": o.T_htf_cold_des,
         "eta_vs_case_F_pp": 100.0 * (eta - 0.51289),
+        # The design cooling MAGNITUDE, taken from ssc's own reported fan power rather than from
+        # the map's cooling column -- see cooling_fraction_pct() for why that distinction matters.
+        "W_dot_cooler_fan_kWe": float(o.cooler_tot_W_dot_fan),
         "problems": problems,
     }
+
+
+def cooling_fraction_pct(d, W_dot_des_kWe):
+    """`ud_f_W_dot_cool_des` -- design cooling as a percentage of design output.
+
+    THIS WAS WRONG UNTIL 2026-08-14 AND THE ERROR WAS SILENT, so the reasoning is recorded here
+    rather than left to be re-derived. The original line was
+
+        f_cool_pct = 100.0 * cool_des / W_DOT_NET_DES_KWE        # 100 * 9.971e-4 / 115000
+
+    where `cool_des` is the DESIGN VALUE OF THE MAP'S COOLING COLUMN. That column is not a power
+    in kW -- it sits at ~1e-3 while every other response is ~1.0 (CLAUDE.md §4.11) -- so dividing
+    it by a power in kW is a category error. It yielded `ud_f_W_dot_cool_des = 0.0000 %`: a
+    115 MW plant whose air cooler draws nothing, with nothing raised and nothing warned. Exactly
+    the CLAUDE.md §4.12 failure mode.
+
+    Nor is the column a fraction of design gross: that reading gives 100 * 9.971e-4 = 0.0997 %,
+    which is still 10x low. The magnitude is only available from ssc directly --
+    `cooler_tot_W_dot_fan = 1150.0` kW against a 115 000 kWe design, i.e. 1.0 %, matching the
+    `fan_power_frac = 0.01` that was set as an input. `W_dot_net_less_cooling = 113850.0`
+    (= 115000 - 1150) confirms both the value and its unit, kW not MW (CLAUDE.md §4.9).
+
+    The normalised SHAPE of the cooling response still comes from the map column, divided by its
+    own design value in to_combined(); only the scale comes from here. Shape and magnitude travel
+    separately, which is the whole point of §4.12.
+    """
+    pct = 100.0 * d["W_dot_cooler_fan_kWe"] / W_dot_des_kWe
+    # A silent zero is the failure this function exists to prevent, so refuse to ship one.
+    if not (0.05 <= pct <= 10.0):
+        raise MapError(
+            "ud_f_W_dot_cool_des = %.6f %% is outside the plausible 0.05-10 %% band for a "
+            "dry-cooled sCO2 cycle (fan power %.1f kWe against %.1f kWe design). A value near "
+            "zero means the cooling parasitic has been scaled away and the annual result will "
+            "silently omit it." % (pct, d["W_dot_cooler_fan_kWe"], W_dot_des_kWe))
+    return pct
 
 
 # =============================================================================
@@ -559,8 +601,10 @@ def main():
         say("   solved")
     else:
         say("\nsolving design + %d^3 off-design sweep ..." % n)
-        say("   ⚠ this does NOT currently converge at the case F design -- see the module")
-        say("     docstring. Expect it to run indefinitely; --design-only is the usable mode.")
+        say("   This is SLOW, not stuck: ~31-38 min at n = 3 (measured 2026-08-14, five")
+        say("   configurations, 1882.8-2277.9 s). Do NOT kill it early -- a timeout shorter")
+        say("   than the run is exactly what produced twelve false 'hangs'. --design-only")
+        say("   (0.1 s) is the fast path when you only need the cycle, not the map.")
         m = build(args.phi, args.T_htf_hot, n)
         m.execute(0)
         say("   solved at n = %d per axis" % n)
@@ -623,7 +667,7 @@ def main():
 
     # --- tower round-trip -------------------------------------------------
     weather = os.path.join(REPO_ROOT, "data", "tmy", "158192_31.05_-6.86_tmy-2022.csv")
-    f_cool_pct = 100.0 * cool_des / W_DOT_NET_DES_KWE
+    f_cool_pct = cooling_fraction_pct(d, W_DOT_NET_DES_KWE)
     tower, info = apply_to_tower(rows, d["eta_thermal_calc"], W_DOT_NET_DES_KWE / 1000.0,
                                  f_cool_pct, weather)
     say("\nTOWER BRIDGE")
@@ -633,10 +677,14 @@ def main():
     say("   design magnitudes    design_eff %.5f (was %.4f), P_ref %.1f MW (was %.1f)"
         % (d["eta_thermal_calc"], info["steam_defaults_replaced"]["design_eff"],
            W_DOT_NET_DES_KWE / 1000.0, info["steam_defaults_replaced"]["P_ref"]))
-    say("   ud_f_W_dot_cool_des  %.4f %% of design gross" % f_cool_pct)
+    say("   ud_f_W_dot_cool_des  %.4f %% of design output  (fan %.1f kWe / %.0f kWe)"
+        % (f_cool_pct, d["W_dot_cooler_fan_kWe"], W_DOT_NET_DES_KWE))
 
     # --- durable output ---------------------------------------------------
-    tag = ("phi%.4f" % args.phi).replace(".", "p")
+    # The sweep resolution is part of the artifact's identity: a 3-point and a 5-point map are
+    # different surfaces and must not overwrite each other, since comparing them is how the cost
+    # of a coarse map gets quantified (THESIS_SYNTHESIS.md §17 step 2).
+    tag = ("phi%.4f_n%d" % (args.phi, n)).replace(".", "p")
     tower_path = write_csv(os.path.join(MAPS_DIR, "sco2_udpc_%s_tower7.csv" % tag),
                            TOWER_COLS, rows)
     per_axis_rows = []

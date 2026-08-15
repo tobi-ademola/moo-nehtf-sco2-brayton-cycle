@@ -602,3 +602,129 @@ If the boundary excludes a pinned f_rc outright, that is a **modelling decision,
 belongs in `DECISIONS.md`: the map would be generated at a solver-chosen f_rc and the gap against
 case F's 0.4097 measured rather than assumed small. f_rc is decision variable #10, which the
 optimiser sweeps anyway — so this may cost less than it first appears.
+
+---
+
+## 2026-08-14/15 — Code lane — **THE UDPC BLOCKER WAS NOT REAL. §11 item 2 IS CLOSED.**
+
+**Trigger.** "Pick up where we left off" → the documented next action was `THESIS_SYNTHESIS.md`
+§17 item 1: re-establish the bisection control before interpreting anything in the Round-2 table.
+That instruction was right and it broke the case open — but the answer was the opposite of the
+expected one.
+
+### 1. The finding: the sweep converges at the FULL case F design
+
+```
+case_F, sweep ON, 3 pts/axis  ->  USABLE in 2277.9 s (38.0 min)
+                                  recomp_frac 0.40970, eta 0.50547, tables non-empty
+```
+
+`results/udpc_bisect_20260814T194825Z.*`. **Nothing had to be loosened.** All five configurations
+run with the sweep on are usable, and the knobs move wall time by only ~20 %:
+
+| case | wall s | recomp_frac | eta |
+|---|---|---|---|
+| `case_F` (all tight) | 2277.9 | 0.40970 | 0.50547 |
+| `F_loose_frc` | 2152.3 | 0.41067 | 0.50569 |
+| `F_loose_dm` | 2218.6 | 0.40970 | 0.49999 |
+| `F_loose_press` | 1882.8 | 0.40970 | 0.50654 |
+| `F_loose_tol` | 1963.3 | 0.40970 | 0.50512 |
+
+### 2. Why the previous conclusion was wrong
+
+**Every one of the twelve prior experiments was capped at 5–16 minutes against a run needing
+31–38.** None had ever observed a completion, so none licensed the word "hangs". What was measured
+was *"did not finish inside my timeout"*; what was recorded was *"does not converge"* — and a
+mechanism ("a fully determined design is over-constrained for UDPC generation") was then built to
+explain a dozen non-observations.
+
+It was persuasive because it had every marker of a sound finding except a valid measurement:
+twelve cells agreed (they agreed because they shared the defect); the mechanism was physically
+plausible; the one anomalous point (`recomp_frac = 0`) matched the genuinely documented §4.3
+collapse and so looked already explained; and the cost structure discouraged the disconfirming
+test, since every redesign of the search made runs *shorter*. The single experiment that would
+have settled it — let one case run to completion, however long — was never the cheap option and
+was never run.
+
+**Two supporting corrections:**
+
+- **`design_method = 1` was miscategorised as "loose". It is not — it ADDS a constraint** (an
+  inverse solve for the recuperator conductance that hits a target η). With free pressures and a
+  free `f_rc` it is the **only** configuration that genuinely fails: 2026 s, then a real
+  diagnostic — *"Can't find a value of total recuperator conductance that achieves the target
+  cycle efficiency."* The trusted control was the one broken cell, and every stage-1 case
+  inherited it, so those five results are **void**, not merely uninterpreted.
+- **The 93.6 s / `recomp_frac = 0.0` run has never reproduced.** Do not cite it.
+
+**Rule adopted** (`CLAUDE.md` §4.15, `MASTER_PLAN.md` §10): a non-convergence may be recorded only
+against a **measured** completion time for that class of run, or with an explicit statement that
+none is known.
+
+### 3. A second silent bug, caught in the same pass
+
+The n=3 bridge reported `roundtrip_rel = 0.000e+00` and "the bridge is CLOSED" while shipping
+**`ud_f_W_dot_cool_des = 0.0000 %`** — a 115 MW plant with a costless air cooler.
+`build_udpc_map.py` computed `100 × cool_des / 115000`, treating the map's dimensionless cooling
+column as if it were kW. The first correction (`100 × cool_des` = 0.0997 %) was **also wrong**, by
+10×, so `scripts/check_udpc_cooling_scale.py` was written to settle it against ssc's own scalars:
+
+```
+cooler_tot_W_dot_fan      1150.0 kW  ->  1.0 % of the 115 000 kWe design
+W_dot_net_less_cooling  113850.0     =   115000 - 1150   (confirms value AND unit, §4.9)
+```
+
+1.0 % matches the `fan_power_frac = 0.01` supplied as an input. `cooling_fraction_pct()` now takes
+the magnitude from ssc and **refuses to emit anything outside 0.05–10 %**.
+
+> **Round-trip fidelity tests transport, not correctness.** The table went in and came back
+> bit-identical while being scaled wrongly the whole time. It was caught by reading a magnitude
+> that was physically impossible, not by any check in the script.
+
+### 4. §11 item 2 delivered — the FIRST INTEGRATED ANNUAL RESULT
+
+`scripts/run_integrated_annual.py`, `results/integrated_annual_20260815T094134Z.*`. Morocco TMY,
+nano-chloride at 0.7 wt% via `rec_htf = 50`, UDPC map n=3, `Singleowner` created before
+`execute()` (§4.13):
+
+| case | status | annual kWh | nameplate kW | loop ΔT | rec pump des |
+|---|---|---|---|---|---|
+| `sco2_n3` | OK | **440,206,500** | **62,612** | 167 K | 49.55 MW |
+| `steam_same_T` | OK | 389,388,747 | 22,945 | 167 K | 86.73 MW |
+
+**The §7.5 inference is now tested rather than asserted: +13.05 % annual energy** for sCO₂ over
+steam at identical fluid, loop temperatures and field area (A_sf 1,348,316 m² in both). ⚠ State it
+precisely: receiver design duty is **not** held fixed (546.0 vs 669.9 MW), because
+`q_rec = P_ref/design_eff × SM` — a more efficient cycle needs less heat for the same gross
+output, which also cuts its pumping. The 13.05 % contains both effects.
+
+**The integrated model's own new constraint, and it is the important one.** The sCO₂ recompression
+cycle is heavily recuperated, so it returns HTF at **533.3 °C** against a 700 °C source — a loop ΔT
+of only **166.7 K**. The design is feasible (positive nameplate) but pays **49.55 MW of receiver
+pumping, ~43 % of gross**, leaving 62.6 MW net out of a 115 MW block.
+
+**This cross-validates §7.4 from an independent direction.** Applying that section's ṁ ∝ q/ΔT with
+W ∝ ṁ³ to its 250 K / 669.9 MW anchor predicts **49.4 MW** against **49.55 MW measured** (0.3 %);
+the steam case predicts 91.3 vs 86.73 MW measured, 5 % high and consistent with §7.4's measured
+sub-cubic exponent. Two independently built modules agree on a parasitic neither was fitted to.
+
+⚠ `capacity_factor` came out at **193.73 %** for the steam case — live confirmation of the §7.7
+trap, since its denominator is that case's own 22.9 MW nameplate. **Not quotable.**
+
+### 5. Scripts and docs
+
+- **New:** `scripts/run_integrated_annual.py`, `scripts/check_udpc_cooling_scale.py`.
+- **`scripts/udpc_convergence_bisect.py`** — added **stage 3**, which walks the lattice from case F
+  (a known-good origin) rather than from the void loose bundle, plus `--sweep 0` to separate
+  "never reached a design point" from "map generation failed". Stage 1's origin is labelled VOID.
+- **`scripts/build_udpc_map.py`** — status docstring rewritten (the old one asserted
+  non-convergence); the runtime warning now says *slow, ~31–38 min, do not kill it early*; map
+  filenames carry their resolution (`_n3`, `_n5`) so two resolutions cannot overwrite each other.
+- **Docs:** `CLAUDE.md` §4.15 (new), §4.12 extended, header; `MASTER_PLAN.md` §10 risk withdrawn
+  and §11 item 2 closed; `THESIS_SYNTHESIS.md` §1.1, §1.2, §9 (rewritten, superseded diagnosis
+  retained under a collapsed block), §12, §13, §14, §15, §17.
+
+**Next.** §11 item 3 — wire the decision vector. Two things settle first, both now quantified
+rather than guessed: (a) the **map resolution** question — an n=5 build is running for the annual
+comparison against n=3; (b) the **build-cost partition** — SM and t_TES need only a ~30 s tower run
+against an existing map, while the six cycle variables force a ~35 min rebuild, so Morris must be
+budgeted against that split or it implies tens of hours of map generation alone.

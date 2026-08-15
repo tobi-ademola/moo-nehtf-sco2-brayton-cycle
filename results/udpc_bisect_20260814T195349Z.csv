@@ -1,0 +1,5 @@
+case,knobs,verdict,status,wall_s,recomp_frac,eta,P_comp_in,P_comp_out,eff_HTR,eff_LTR,n_axis_rows,htf,ranges,sweep,htf_mins,detail
+F_loose_dm,design_method=L f_rc=T pressure=T rel_tol=T,DESIGN_OK,ok,3.7098581790924072,0.4097,0.49999022140315524,7.6923076923076925,20.0,0.9691323727959902,0.9195709557904284,,nano,wide,0,1,
+F_loose_frc,design_method=T f_rc=L pressure=T rel_tol=T,DESIGN_OK,ok,0.20201349258422852,0.4106689453125,0.5056853976665787,7.6923076923076925,20.0,0.9750851705842732,0.9328513770370359,,nano,wide,0,1,
+F_loose_press,design_method=T f_rc=T pressure=L rel_tol=T,DESIGN_OK,ok,1.91426420211792,0.4097,0.5065366898968946,7.61237687984189,19.99933893038648,0.974785675231279,0.9342358033524388,,nano,wide,0,1,
+F_loose_tol,design_method=T f_rc=T pressure=T rel_tol=L,DESIGN_OK,ok,0.06833410263061523,0.4097,0.5051155572578978,7.6923076923076925,20.0,0.9751208450156257,0.9299754077964201,,nano,wide,0,1,

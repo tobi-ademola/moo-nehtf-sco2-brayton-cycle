@@ -1,0 +1,6 @@
+case,knobs,verdict,status,wall_s,recomp_frac,eta,P_comp_in,P_comp_out,eff_HTR,eff_LTR,n_axis_rows,detail
+loose_all,design_method=L f_rc=L pressure=L rel_tol=L,FAIL(timeout),timeout,360.0,,,,,,,,
+pin_frc,design_method=L f_rc=T pressure=L rel_tol=L,FAIL(timeout),timeout,360.0,,,,,,,,
+pin_press,design_method=L f_rc=L pressure=T rel_tol=L,FAIL(timeout),timeout,360.0,,,,,,,,
+pin_dm,design_method=T f_rc=L pressure=L rel_tol=L,FAIL(timeout),timeout,360.0,,,,,,,,
+pin_tol,design_method=L f_rc=L pressure=L rel_tol=T,FAIL(timeout),timeout,360.0,,,,,,,,

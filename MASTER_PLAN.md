@@ -198,11 +198,15 @@ Do **not** try to validate the whole integrated plant against one paper (few rep
       T_hot, not left to discover it** — this binds decision variables #5 and #6 together.
       ssc reports no error on the infeasible design, so **screen every run on
       `system_capacity > 0`** (`CLAUDE.md` §4.14).
-- [ ] ⚠ **NEW — the UDPC off-design sweep does not converge at the case F design.** It completes
-      only when the cycle is left loose enough to **collapse to `recomp_frac = 0`** (§4.3). This
-      blocks §11 item 2. Ruled out already: the custom fluid, pinned f_rc, pinned pressures,
-      `rel_tol`. Remaining suspects: `design_method = 3`, and the min-approach-dT recuperator
-      spec held across off-design. See `scripts/build_udpc_map.py`.
+- [x] ~~⚠ **the UDPC off-design sweep does not converge at the case F design**~~ — **WITHDRAWN
+      2026-08-14. The risk was never real.** The sweep converges at the full case F design in
+      **38 min**; every experiment that reported otherwise was capped at 5–16 min. See
+      `CLAUDE.md` §4.15 and `scripts/build_udpc_map.py`.
+- [ ] ⚠ **NEW — long ssc runs need a MEASURED completion time before any non-convergence is
+      recorded.** This one cost a session and produced a wrong finding that reached the thesis
+      synthesis. The UDPC sweep prints nothing for ~35 min and is indistinguishable from a hang.
+      **Rule: quote a measured wall time, or state that none is known — never infer "hangs" from
+      "my timeout expired."** Applies to every long run in this project, not just UDPC.
 - [ ] MD-viscosity provenance sentence for the thesis — **research/writing**, not blocking.
       (`SOURCES.md` §C0 already reframes this from weakness to field convention.)
 - [ ] Location set for Obj5 — Morocco TMY in hand, Southern Africa file needs re-downloading.
@@ -227,15 +231,16 @@ Ordered. Each item blocks the ones below it. **Nothing in §12 competes with the
      inside its stated validity).
    - ✅ The 13-col→7-col inverse-split transform is **proven** by `--selftest`, independently of
      ssc (`CLAUDE.md` §4.11).
-   - ❌ **The off-design sweep does not converge** — it completes only in configurations that
-     collapse the recompression cycle to `recomp_frac = 0`. **This is the single thing blocking
-     the guaranteed deliverable.** **Seven** single-variable deviations from case F have now been
-     tested and all are negative (fluid, f_rc pinning, pressure pinning, `rel_tol`, recuperator
-     code 3, `design_method` 1 and 2, sweep corners) — so it is **not one bad setting**: a fully
-     determined case-F-style design is over-constrained for UDPC generation. **Next move: bisect
-     the other way** — start from the loose bundle that converges in 93.6 s and re-tighten toward
-     case F until it breaks. If the boundary excludes a pinned f_rc, that is a modelling decision
-     for `DECISIONS.md`, not a bug.
+   - ✅ **The off-design sweep CONVERGES at the full case F design** — 2026-08-14,
+     `results/udpc_bisect_20260814T194825Z.*`. `recomp_frac 0.40970`, η 0.50547, non-empty
+     tables, **2277.9 s (38.0 min)**. Nothing had to be loosened.
+   - ⚠️ **The previous "does not converge" finding was an artifact of short timeouts and is
+     withdrawn.** All twelve prior experiments were capped at 5–16 min against a run that needs
+     31–38. There is **no** convergence boundary: five configurations tested with the sweep on
+     are all usable, and the knobs move wall time by only ~20 % (`CLAUDE.md` §4.15). The claim
+     that a fully determined design is "over-constrained for UDPC generation" is **refuted** —
+     as is the 93.6 s loose-bundle control, which has never reproduced and in fact **fails**
+     after 2026 s with a real ssc diagnostic.
 3. **Wire the decision vector** — expose all 10 variables of §3 as model inputs with validated
    ranges, so screening can drive them.
 4. **Morris screening** (§7) over the 10 variables. ← **THE GUARANTEED DELIVERABLE.**

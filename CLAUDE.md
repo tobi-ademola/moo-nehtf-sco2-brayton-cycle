@@ -3,8 +3,9 @@
 > Read this before touching anything. It is written so a **fresh Code session or a brand-new
 > account** can run the pipeline cold with zero prior context. Companion to `MASTER_PLAN.md`.
 
-**Last updated:** 2026-08-13 — Session E (env rebuilt from scratch: Python 3.13 installed alongside
-3.14, `.venv` recreated; Dostal validation re-run and reproduced bit-for-bit — see §1.0, §1.0a, §7)
+**Last updated:** 2026-08-14 — Session F (**the UDPC blocker is cleared: the sweep converges at the
+full case F design in ~38 min; it was never over-constrained, only slower than every timeout used
+to test it — see §4.15**)
 **Machine:** Windows 11 Pro 10.0.26200, win32
 **Repo root:** `C:\Users\chukw\code\moo-nehtf-sco2-brayton-cycle`
 
@@ -319,6 +320,23 @@ m.SystemDesign.design_eff                         = ...   # <- or you keep 0.412
 m.SystemDesign.P_ref                              = ...   # <- or you keep 115 MW
 ```
 
+⚠ **`ud_f_W_dot_cool_des` must come from `cooler_tot_W_dot_fan`, NOT from the map's cooling
+column.** This was live in `build_udpc_map.py` until 2026-08-14 and produced
+`ud_f_W_dot_cool_des = 0.0000 %` — a 115 MW plant whose air cooler draws nothing, with no error
+and no warning. The column's design value is ~9.971e-04 (§4.11); it is **not** a power in kW, so
+dividing it by a kW design power is a category error, and it is **not** a fraction of gross
+either — that reading gives 0.0997 %, still 10× low. Take the magnitude from ssc:
+
+```python
+o.cooler_tot_W_dot_fan      # 1150.0 kW at the case F design (labelled MW, really kW -- §4.9)
+o.W_dot_net_less_cooling    # 113850.0 = 115000 - 1150, which confirms both value and unit
+f_cool_pct = 100.0 * o.cooler_tot_W_dot_fan / W_dot_des_kWe    # = 1.0 %, matching fan_power_frac
+```
+
+The normalised **shape** still comes from the map column divided by its own design value; only
+the **scale** comes from here. `scripts/check_udpc_cooling_scale.py` re-derives this in 0.1 s
+without running the ~35-minute sweep.
+
 ### 4.13 `Singleowner.from_existing()` must be called BEFORE `execute()`
 
 The financial model shares the CSP model's data container, so it has to exist before the CSP run
@@ -344,6 +362,38 @@ whose receiver pump wanted 162 MW (`results/htf_sam_bridge_*`). **Screen every r
 Related trap in the same output set: **`capacity_factor` is not comparable across cases whose
 design changes.** Its denominator is the per-case nameplate, so CF *rises* while annual energy
 *falls*. Compare `annual_energy` and `system_capacity`, which share a fixed basis.
+
+### 4.15 The UDPC sweep takes ~35 MINUTES. A short timeout manufactures false negatives.
+
+`Sco2CspUdPcTables` with `is_generate_udpc = 1` needs **31–38 minutes** at 3 points per axis on
+this machine — measured 2026-08-14 across five configurations (1882.8–2277.9 s). The design point
+alone solves in **0.1 s**, so the sweep is ~20,000× the design cost and there is **no progress
+output whatsoever** while it runs. It looks indistinguishable from a hang.
+
+**This cost the project a full session and a wrong finding.** Twelve experiments across two
+sessions were capped at 5–16 minutes, all reported "hangs", and a mechanism was invented to
+explain them — that a fully determined recompression design is *over-constrained for UDPC
+generation*. It is not. Full case F (every recuperator specified, f_rc pinned at 0.4097, both
+pressures pinned, `rel_tol` 4) converges to a **usable map with `recomp_frac = 0.40970`,
+η 0.50547**. Nothing had to be loosened.
+
+> **The rule this earns:** *"did not finish inside my timeout"* is **not** *"hangs"*, and it
+> carries **no information at all** until the timeout is justified against a **measured**
+> completion. Before recording any non-convergence in this project, run one case to completion
+> and quote its wall time, or state plainly that no completion time is known.
+
+Two related traps found in the same investigation:
+
+- **`design_method = 1` is not a "loose" setting — it adds a constraint.** It makes ssc solve an
+  *inverse* problem (find the total recuperator conductance that hits a target efficiency), and
+  with free pressures and a free `f_rc` it is the **only** configuration that genuinely fails:
+  2026 s, then a real diagnostic, not a hang —
+  `Can't find a value of total recuperator conductance that achieves the target cycle efficiency.`
+- **Loosening buys nothing.** Freeing `f_rc`, freeing the pressures or relaxing `rel_tol` changes
+  the wall time by ~20 % and does not change convergence. With everything else pinned, a free
+  `f_rc` **self-selects 0.41067** against case F's pinned 0.40970 — 0.24 % apart, worth
+  +0.02 pp in η. Unpinning it is nearly free, which retires the modelling decision §9.4 of
+  `THESIS_SYNTHESIS.md` had reserved.
 
 ---
 

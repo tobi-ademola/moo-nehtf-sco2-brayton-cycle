@@ -1,0 +1,2 @@
+case,knobs,verdict,status,wall_s,recomp_frac,eta,P_comp_in,P_comp_out,eff_HTR,eff_LTR,n_axis_rows,htf,ranges,sweep,htf_mins,detail
+F_loose_frc,design_method=T f_rc=L pressure=T rel_tol=T,USABLE,ok,2152.281628847122,0.4106689453125,0.5056853976665787,7.6923076923076925,20.0,0.9750851705842732,0.9328513770370359,3,nano,wide,1,1,
