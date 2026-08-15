@@ -1332,7 +1332,7 @@ point, identical `ud_f_W_dot_cool_des` and identical pumping.
 
 *(Chapter 3.9 as method-hardening; Chapter 4.7 as a contribution in its own right)*
 
-Fourteen tool-level defects and traps were found by execution, each verified in this environment
+Fifteen tool-level defects and traps were found by execution, each verified in this environment
 rather than transcribed from any prior write-up. Several are **silent** — they produce plausible
 wrong numbers rather than errors — which is exactly why cataloguing them is a contribution to anyone
 else building on the same toolchain.
@@ -1350,15 +1350,33 @@ else building on the same toolchain.
 | 4.9 | **Mass flows are 1000× their documented units** | `m_dot_co2_full` reports 87 268.8 where three independent energy balances give 87.2688 kg/s; powers document MW but are kW. **This bug was live in the project's own smoke test and made every printed Ṡ_gen 3.6× too low.** Now derived from turbine duty with an assert |
 | 4.10 | No direct `T_mc_in` / `T_turb_in` input | Both are derived from approach temperatures; pinning `P_high` and PR together fully determines the pressure levels |
 | 4.11 | **The UDPC table has two shapes and the two modules disagree** | See §9.1, including the unnormalised cooling column |
-| 4.12 | `ud_ind_od` carries shapes only | Omit the design magnitudes and the tower silently keeps steam-Rankine `design_eff = 0.412`, `P_ref = 115 MW` |
+| 4.12 | `ud_ind_od` carries shapes only — **and the magnitudes must be sourced correctly, not merely set** | Omit them and the tower silently keeps steam-Rankine `design_eff = 0.412`, `P_ref = 115 MW`. Worse, `ud_f_W_dot_cool_des` computed from the map's cooling column gives **0.0000 %** — a costless air cooler on a 115 MW plant. The column is dimensionless; the magnitude exists only as `cooler_tot_W_dot_fan = 1150 kW = 1.0 %` |
+| **4.15** | **The UDPC sweep takes ~35 min and prints nothing while running** | Indistinguishable from a hang. Twelve experiments capped at 5–16 min produced a confident false finding of non-convergence that reached this synthesis. **"Did not finish inside my timeout" is not "hangs"** and carries no information until the timeout is justified against a measured completion. Related: `design_method = 1` is not a "loose" setting — it *adds* an inverse solve for recuperator conductance |
 | 4.13 | `Singleowner.from_existing()` must precede `execute()` | Otherwise the financial model sees a single `gen` record |
 | 4.14 | **A negative nameplate is not an error to ssc** | See §7.7 |
 
 **The pattern worth naming in the thesis:** the dangerous defects are not the ones that crash. They
 are 4.3, 4.9, 4.12 and 4.14 — each produces a complete, plausible, *wrong* result with no warning.
-Every one of them was caught by a **conservation check**, never by a sanity check, which is the
-methodological argument for building balance closures into the model rather than bolting on
+Most were caught by a **conservation check** rather than by a sanity check, which is the
+methodological argument for building balance closures into the model instead of bolting on
 assertions afterwards.
+
+**Two of them qualify that claim, and the qualification is the more useful half.**
+
+- **The cooling mis-scale (4.12) was not caught by any check in the code.** It was caught by
+  reading a reported magnitude — `0.0000 %` — that was physically impossible. No conservation law
+  in the model was violated, because the parasitic was simply absent from every balance rather
+  than inconsistent within one. **A quantity that is wrongly zero is invisible to a balance it
+  never enters.** The defence is a plausibility band on reported magnitudes, which is now
+  enforced in `cooling_fraction_pct()`.
+- **The false non-convergence (4.15) was not a defect in the model at all**, and no check on the
+  model could have caught it. It was a defect in the *experimental procedure* — a timeout shorter
+  than the run. Its defence is procedural too: quote a measured completion time, or declare that
+  none is known.
+
+Stated together: conservation checks catch wrong *values*; they do not catch **absent** values or
+**absent** observations. This project was bitten once by each, and both are cheap to guard against
+once named.
 
 ---
 
@@ -1566,10 +1584,19 @@ survive. And the model *predicted* near-isenthalpic mixing at the junction befor
 **Q. What is the single most important thing you learned?**
 That agreement on a bulk number is not validation. The efficiency matched to a quarter of a
 percentage point while the internal state was wrong by 5 %, and it took node-level comparison,
-conservation closure at the junction and a second-law check on the mixer to find it. Every
-significant defect found in this project — the 1000× mass flow, the collapsed recompression, the
-mis-scaled cooling column, the negative nameplate — produced a plausible number, and every one was
-caught by a conservation check rather than by inspection.
+conservation closure at the junction and a second-law check on the mixer to find it. Nearly every
+significant defect in this project — the 1000× mass flow, the collapsed recompression, the negative
+nameplate — produced a plausible number caught by a conservation check rather than by inspection.
+
+The refinement I'd add, because two later defects escaped that net: conservation checks catch
+wrong *values*, but not **absent** ones and not **absent observations**. The cooling parasitic was
+scaled to zero, and a quantity that is wrongly zero never enters the balance that would have
+contradicted it — it was caught only by noticing a reported magnitude that was physically
+impossible. And the false non-convergence was not a modelling defect at all but a procedural one,
+a timeout shorter than the run, which no check on the model could have caught. So the honest
+lesson is that a model needs three different kinds of guard: balances for wrong values,
+plausibility bands for missing ones, and measured completion times before any absence is
+interpreted as a result.
 
 ---
 
