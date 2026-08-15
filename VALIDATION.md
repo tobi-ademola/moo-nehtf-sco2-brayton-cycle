@@ -102,7 +102,9 @@ Two decoupled sub-goals, now both anchored:
 - **Node-by-node (T, P, h, s) validation → Dostal 2004** (MIT-ANP-TR-100). Publishes full state
   tables for three recompression designs (550 / 650 / 700 °C). Data transcribed in §2.3. This is
   the PRIMARY power-block anchor and REPLACES the earlier Dyreby-only plan, which could not supply
-  per-node h/s (Dyreby Table 6.1 gives design inputs only). See `SOURCES.md` §A5.
+  per-node h/s (Dyreby Table 6.1 gives design inputs only). See `SOURCES.md` **§A0**.
+  *(Cross-ref corrected 2026-08-15: this read "§A5", which was Dostal's slot in the original
+  `b9db467` numbering but has since been reassigned to Stamatellos 2022. Dostal is now §A0.)*
 - **Aggregate design-point cross-check → Dyreby 2014** (thesis Table 6.1) and **Turchi 2013**
   (config-level η). Optional secondary confirmation only. See `SOURCES.md` §A1–A3.
 

@@ -748,3 +748,232 @@ enters through the HTF property table and therefore changes the PHX. A naive (10
 design implies tens of hours of map generation alone; cache maps per cycle-design instead.
 Add the new §9.5b constraint to the vector: the integrated design sits at a 166.7 K loop ΔT and
 spends ≈43 % of gross on pumping, so ΔT is an active variable, not a passive outcome.
+
+---
+
+## 2026-08-15 — Research lane — SOURCES.md reconciled against the hand-verified DOI set
+
+**Ran:** `scripts/reconcile_sources_dois.py` (new, durable) — report mode, then `--apply`.
+**Outputs:** `results/sources_doi_reconcile_20260815T114805Z.{csv,md}` (the applying run) and
+`results/sources_doi_reconcile_20260815T114945Z.{csv,md}` (final state ledger).
+
+### 1. The two files were siblings, not ancestor and descendant
+
+The user hand-verified every DOI in a copy of SOURCES.md, but the copy was taken from the Session D
+draft, and SOURCES.md has since moved on. Neither file dominates:
+
+```
+b9db467 (165 lines, 12 DOIs)
+   +--> Session D draft (50 sources) --> `SOURCES - Copy.md`  [+ hand-verified DOIs, + Prettier pass]
+   +--> edd9f8b --> HEAD `SOURCES.md`                          [+ section A8, + F2 correction]
+```
+
+So `cp` in either direction destroys work. The merge was done the only correct way: **SOURCES.md
+as the structural base, the copy contributing DOI VALUES only.** The copy's Prettier pass
+(`*x*`→`_x_`, blank line after every heading) accounts for ~214 of the 244 diff lines and carries
+no meaning — and it introduced two text corruptions that were therefore never inherited:
+`c_p`→`c*p` and `_small_`→`\_small*` in C9, and `PT-CSP **+** TES` re-parsed into a list bullet
+`- TES` in H5. **Do not adopt `SOURCES - Copy.md` wholesale for any reason.**
+
+### 2. Result: 31 of 48 DOIs settled, 14 in conflict, 3 still missing
+
+| status | n | meaning |
+|---|---|---|
+| CONFIRMED | 17 | identical in both files — the hand check carries over unchanged |
+| FILLED | 14 | placeholder (`...2023.xxxxx`) in base, real DOI in the verified copy — applied |
+| CHANGED | 14 | both real and DIFFERENT — **conflict, deliberately NOT auto-applied** |
+| MISSING_DOI | 3 | A4, D1, D3 — no DOI in either file, lookup outstanding |
+
+**F2 Battisti: caveat discharged.** Session E corrected this citation and left a "re-confirm the
+DOI suffix at citation time" flag because MDPI blocks automated fetch (HTTP 403). The independent
+hand pass returned the same `10.3390/en16124755`. Two routes agreeing is the confirmation asked
+for. Telling detail: the copy paired that *new* DOI with the *old* `16(13):5073` volume text — the
+DOI was checked, the surrounding metadata was not.
+
+### 3. The 14 conflicts have a diagnosable signature, and it is not random
+
+For Elsevier/MDPI/Springer the DOI suffix normally **is** the article number, so `Energy 300:131594`
+should carry `10.1016/j.energy.2024.131594`. In **all 14** conflicts the as-drafted DOI satisfies
+that identity and the hand-verified one does not — the signature of a DOI *synthesised from the
+citation* rather than read off the article. That argues the verified column should win, **but the
+two fields then contradict each other**: adopting the verified DOI makes the printed volume:article
+the wrong field, and it must be corrected in the same pass. Logged as §J1 in SOURCES.md.
+Check **C7 first** — there the journal itself changes (*Applied Energy* 2022 →
+*Applied Thermal Engineering* 2025), so it resolves to a different paper, not a corrected suffix.
+
+### 4. The durable fix: verification state now lives in the file
+
+The reconcile was only necessary because **SOURCES.md recorded identifiers but no verification
+state** — a checked DOI and an unchecked one were byte-identical, so the knowledge died with the
+session that did the checking (§0 rule 2). `--apply` now writes an inline `*[DOI verified <date>]*`
+marker on every settled line and strips the stale `(verify at cite)` hedge. **An unmarked DOI line
+is an unchecked one**, and the next rewrite is reconcilable by reading rather than by archaeology.
+
+**Also:** `scripts/audit_sources_links.py` (untracked, from an earlier attempt) assumed the verified
+state lived in git rev `b9db467` — that file is 165 lines with 12 DOIs, not the 49 actually
+verified, so its premise was wrong and it had never run (`normalize()` raised `NotImplementedError`).
+`normalize()` is now implemented so the script at least executes, but
+`reconcile_sources_dois.py` supersedes it; consider deleting it.
+
+**Next.** Adjudicate the 14 §J1 conflicts (one lookup each, DOI *and* volume:article together),
+then the 3 §J2 missing DOIs. The `apply_policy()` CHANGED branch is left unimplemented on purpose —
+the trust rule is a research judgement, not a coding one.
+
+---
+
+## 2026-08-15 — Research lane — 14 DOI conflicts CLOSED against Crossref; §A0 Dostal 2004 restored
+
+**Ran:** `scripts/apply_doi_conflict_resolutions.py` (new, durable), then
+`scripts/reconcile_sources_dois.py` to confirm.
+**Outputs:** `results/sources_doi_resolutions_20260815T121842Z.{csv,md}` (adjudication ledger),
+`results/sources_doi_reconcile_20260815T122152Z.{csv,md}` (final state).
+
+### 1. Method: ask Crossref for the paper, don't test the candidates
+
+Each of the 14 conflicts was resolved by querying `api.crossref.org/works?query.bibliographic=`
+with the paper's **title**, not by checking which candidate DOI resolves. **A DOI that resolves
+only proves it points at *some* paper, not at *this* one** — and C7 below is exactly that failure
+mode, so the distinction was not academic.
+
+### 2. Outcome: the as-drafted DOI lost 14 of 14
+
+| | count |
+|---|---|
+| hand-verified DOI correct | **13 / 14** |
+| **neither candidate correct** | **1 / 14** (C7) |
+| as-drafted DOI correct | **0 / 14** |
+
+**The "DOI matches the printed article number" signal was backwards.** The reconcile had flagged
+these because the as-drafted DOI satisfied the Elsevier identity (`Energy 300:131594` ↔
+`10.1016/j.energy.2024.131594`) and the hand-verified one did not. That identity is the signature
+of **fabrication, not correctness**: the DOI and the printed volume:article were invented together,
+so they corroborate each other and nothing else. **The printed volume was also wrong in 12 of 14**,
+so both fields were corrected in the same pass. Corrected: A6, A7, B1, B4, B5, C1, C7, C9, E3, F1,
+G1, G3, H2, I7 (+ D2's volume/title completed from the same lookups).
+
+⚠ **C7 Xian 2022 — both candidates wrong.** True record: *Applied Energy* **323**:119555,
+`10.1016/j.apenergy.2022.119555`. Drafted gave 325:119921; the hand-verified copy gave
+`10.1016/j.applthermaleng.2025.126209`, an *Applied Thermal Engineering* **2025** paper — a
+different work. **`SOURCES - Copy.md` is therefore known-wrong at C7** and is not authoritative.
+
+That one miss settled the open `apply_policy()` decision: **quarantine every CHANGED row.**
+Auto-applying the hand-verified column would have been right 13 times and written a wrong citation
+into the thesis once, silently — and a citation error costs far more than one lookup. The policy is
+now implemented with this evidence in the code comment, and the `TODO(human)` is closed.
+
+### 3. §A0 Dostal 2004 — the register was missing its most pivotal source
+
+`SOURCES.md` had **no entry for Dostal 2004** — only passing mentions inside §A8 — despite it being
+the adopted power-block baseline (`CLAUDE.md` §7 case F) and the source of every node in
+`VALIDATION.md` §2.3. Added as **§A0** with: MIT-ANP-TR-100 (March 2004), free full text
+`web.mit.edu/22.33/www/dostal.pdf`, DSpace `1721.1/17746`, the f_rc = 0.4097 departure and its
+justification, and the ⚠ that it must not be "corrected" back to 0.39.
+
+**Also gained a peer-reviewed companion the project did not have:** Dostal, Hejzlar & Driscoll
+(2006), *Nuclear Technology* **154(3):265–282**, DOI **10.13182/nt154-265** — use where a journal
+citation is required. It covers the 700 °C High-Performance design **only**; the 550/650 °C tables
+and all per-node data exist solely in the 2004 report.
+
+**Cross-ref fixed:** `VALIDATION.md` §2.1 pointed at `SOURCES.md` §A5 for Dostal. §A5 was Dostal's
+slot in the original `b9db467` numbering but has since been reassigned to Stamatellos 2022, so the
+reference silently pointed at an unrelated paper. Now §A0. No other stale `§A*` cross-refs found.
+
+### 4. State
+
+`CONFIRMED 44 · CHANGED 1 · MISSING_DOI 3 · NO_DOI 12`. The lone CHANGED is C7 and is **permanent
+and correct** — SOURCES.md now holds the true DOI while the copy holds a wrong one, so the two
+files are *supposed* to disagree there.
+
+**Next.** The 3 §J2 missing DOIs (A4 Mammadov, D1 Liu & Xiao, D3 Mirahmad) — none has a DOI in
+either file. A4 is a low-profile venue and may genuinely lack one. Also outstanding: §A8's three
+recommended-acquisition DOIs (Padilla, Moisseytsev, Sarkar) are unverified, and the reconcile
+tracks only the first, since it models one DOI per entry.
+
+---
+
+## 2026-08-15 — Research lane — §J2 CLOSED: the 3 missing DOIs found; SOURCES.md DOI lane finished
+
+**Ran:** `scripts/apply_doi_conflict_resolutions.py` (batch 2 appended to the same RESOLUTIONS
+table), then `scripts/reconcile_sources_dois.py` to confirm.
+**Outputs:** `results/sources_doi_resolutions_20260815T122908Z.{csv,md}`,
+`results/sources_doi_reconcile_20260815T122957Z.{csv,md}`.
+
+### 1. All three found
+
+| entry | DOI | record |
+|---|---|---|
+| A4 Mammadov & Kalbaliyev 2026 | `10.47390/ts-v4i5y2026n19` | *Topical Issues of Technical Sciences* 4(5), art. n19 |
+| D1 Liu & Xiao 2023 | `10.1016/j.energy.2023.128732` | *Energy* 282:128732 |
+| D3 Mirahmad et al. 2025 | `10.3390/nano15040302` | *Nanomaterials* 15(4):302 |
+
+Two also needed citation corrections, because the lookups showed the recorded titles were
+**paraphrases, not quotations**: D1's "MD investigation of thermophysical..." is really "Molecular
+dynamics investigation of thermo-physical...", and D3 had no title recorded at all. A4 gained its
+authors (Mammadov **& Kalbaliyev**) and a real title; it previously had neither.
+
+⚠ **A4 venue caution added.** *Topical Issues of Technical Sciences* (Techscience.uz) is a
+low-profile regional outlet, not indexed in the major abstracting databases. Unlike the IRJMETS
+paper excluded in §J, its DOI is registered and its η = 50.7 % is thermodynamically plausible and
+consistent with A0/A5/A6 — so it is **kept but explicitly discounted**: soft corroboration only,
+never an anchor.
+
+### 2. Final state — the DOI lane is closed
+
+`CONFIRMED 44 · CHANGED 1 · MISSING_DOI 0 · NO_DOI 12`, and **zero `(verify/fetch at cite)` hedges
+remain** in the file. Every source now carries a verified DOI except:
+
+- **A0** (MIT report/dissertation) and **E2** (NREL report) — DOI-less by nature; A0 carries a
+  DSpace handle plus the peer-reviewed 2006 *Nuclear Technology* companion `10.13182/nt154-265`.
+- **§A8's three deferred acquisitions** (Padilla, Moisseytsev, Sarkar) — logged as new **§J3**.
+  These are unverified *by design*: they have not been acquired, so they carry no marker.
+
+### 3. Two limitations recorded rather than papered over
+
+1. **The marker means the identifier was checked, not that the paper was read.** Every DOI is now
+   confirmed against its Crossref record, but the *key numbers* in most entries still come from
+   Consensus/web snippets and have not been re-read from the articles. Stated explicitly in §J so a
+   later session does not over-read the marker.
+2. **The reconcile models one DOI per entry**, so of §A8's three acquisition DOIs it tracks only the
+   first (Padilla). Two DOIs are invisible to the CSV ledger and must be checked by reading §A8.
+   Noted in §J3.
+
+Also fixed: a cosmetic defect the marker pass introduced in **D2**, where the `(fetch at cite)`
+hedge sat on a *continuation* line — stripping it left a stray `. [C]` line and a duplicated marker.
+
+**Next.** SOURCES.md needs no further DOI work. The open research-lane item is §A8(a): re-run the
+case-F method at Dostal's 550 °C and 650 °C designs, which is the falsifiable test of the f = 0.4097
+finding and needs no new literature.
+
+---
+
+## 2026-08-15 — Research lane — Reconcile inputs retired; SOURCES.md is now the sole authority
+
+**Deleted:** `SOURCES - Copy.md` (the hand-verified Session D copy) and — already removed by the
+user — `scripts/audit_sources_links.py` (superseded, wrong premise, never ran).
+
+**Verified safe before deleting**, not merely requested:
+
+- **0 DOIs present only in the copy** (46 in copy vs 56 in SOURCES.md). Even C7's *wrong*
+  `10.1016/j.applthermaleng.2025.126209` survives, quoted in §J1 as a documented error.
+- **81 normalised lines were unique to the copy, and every one is accounted for:** DOI lines that
+  differ only by the appended `*[DOI verified]*` marker; superseded citation values (`314:118689`,
+  `245:111852`, `16(13):5073`, ...) that were deliberately corrected; the two Prettier corruptions
+  (`deliberately \small shifts` in C9, `- TES becomes...` in H5) that were never ported; and the old
+  D1/D2/D3 forms since enriched with real titles and volumes.
+
+⚠ **`SOURCES - Copy.md` was untracked and never committed, so this deletion is not recoverable from
+git.** It is safe only because of the check above; the substance it carried now lives in SOURCES.md
+(the DOIs + markers), §J1/§J2 (the adjudication), and `results/sources_doi_resolutions_*.csv`.
+
+**`scripts/reconcile_sources_dois.py` is RETIRED but kept**, because deleting its input would
+otherwise leave a script that dies on a traceback — a broken artifact under §0 rule 1. It now
+detects the missing input, explains that completion is the reason it is gone, points at the ledgers,
+and exits 0. `--verified` still accepts any future hand-verified revision, so the tool survives for
+re-use. It also remains the home of the `*[DOI verified]*` convention SOURCES.md depends on and of
+the quarantine policy justified by the C7 near-miss.
+
+`scripts/apply_doi_conflict_resolutions.py` is unaffected — it only edits SOURCES.md, and re-running
+reports all 18 resolutions as ALREADY APPLIED.
+
+**SOURCES.md is now the single authority for citations in this project.** No second copy, no
+external ledger to consult first.

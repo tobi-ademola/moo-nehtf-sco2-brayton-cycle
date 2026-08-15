@@ -1,0 +1,63 @@
+entry,status,base_doi,verified_doi,article_no_crosscheck,action,reason,base_line
+A,NO_DOI,,,n/a,skip,entry carries no DOI by design,
+A0,BASE_ONLY,10.13182/nt154-265,,n/a,skip,unclassified,46
+A1,CONFIRMED,10.1115/1.4027936,10.1115/1.4027936,n/a,skip,identical in both files; the hand check carries over,76
+A2,NO_DOI,,,n/a,skip,entry carries no DOI by design,
+A3,CONFIRMED,10.1115/1.4024030,10.1115/1.4024030,n/a,skip,identical in both files; the hand check carries over,103
+A4,BASE_ONLY,10.47390/ts-v4i5y2026n19,,n/a,skip,unclassified,118
+A5,CONFIRMED,10.3390/en15207773,10.3390/en15207773,agrees,skip,identical in both files; the hand check carries over,136
+A6,CONFIRMED,10.1016/j.enconman.2024.118805,10.1016/j.enconman.2024.118805,agrees,skip,identical in both files; the hand check carries over,147
+A7,CONFIRMED,10.1016/j.egyai.2023.100327,10.1016/j.egyai.2023.100327,agrees,skip,identical in both files; the hand check carries over,158
+A8,BASE_ONLY,10.1016/j.apenergy.2015.03.048.,,n/a,skip,unclassified,201
+B,NO_DOI,,,n/a,skip,entry carries no DOI by design,
+B1,CONFIRMED,10.1016/j.solmat.2021.111432,10.1016/j.solmat.2021.111432,agrees,skip,identical in both files; the hand check carries over,227
+B2,CONFIRMED,10.1016/j.apenergy.2020.114674,10.1016/j.apenergy.2020.114674,agrees,skip,identical in both files; the hand check carries over,241
+B3,CONFIRMED,10.1016/j.solener.2022.12.051,10.1016/j.solener.2022.12.051,DISAGREES,skip,identical in both files; the hand check carries over,252
+B4,CONFIRMED,10.1016/j.energy.2024.131584,10.1016/j.energy.2024.131584,agrees,skip,identical in both files; the hand check carries over,261
+B5,CONFIRMED,10.1007/s11630-024-2023-z,10.1007/s11630-024-2023-z,DISAGREES,skip,identical in both files; the hand check carries over,274
+C,NO_DOI,,,n/a,skip,entry carries no DOI by design,
+C0,NO_DOI,,,n/a,skip,entry carries no DOI by design,
+C1,CONFIRMED,10.1016/j.icheatmasstransfer.2024.108221,10.1016/j.icheatmasstransfer.2024.108221,agrees,skip,identical in both files; the hand check carries over,298
+C10,CONFIRMED,10.1016/j.ceramint.2024.11.486,10.1016/j.ceramint.2024.11.486,n/a,skip,identical in both files; the hand check carries over,384
+C2,CONFIRMED,10.1016/j.molliq.2024.124854,10.1016/j.molliq.2024.124854,agrees,skip,identical in both files; the hand check carries over,310
+C3,CONFIRMED,10.1021/acsami.2c19272,10.1021/acsami.2c19272,n/a,skip,identical in both files; the hand check carries over,319
+C4,CONFIRMED,10.1016/j.solmat.2022.111649,10.1016/j.solmat.2022.111649,agrees,skip,identical in both files; the hand check carries over,327
+C5,CONFIRMED,10.3389/fnuen.2024.1341754,10.3389/fnuen.2024.1341754,n/a,skip,identical in both files; the hand check carries over,334
+C6,CONFIRMED,10.1016/j.solmat.2021.111130,10.1016/j.solmat.2021.111130,n/a,skip,identical in both files; the hand check carries over,343
+C7,CHANGED,10.1016/j.apenergy.2022.119555,10.1016/j.applthermaleng.2025.126209,DISAGREES,quarantine,"both DOIs real and different -- resolve against Crossref by title (crosscheck was 'DISAGREES', which is not sufficient evidence either way)",352
+C8,CONFIRMED,10.1039/d5ra10091g,10.1039/d5ra10091g,n/a,skip,identical in both files; the hand check carries over,362
+C9,CONFIRMED,10.1016/j.icheatmasstransfer.2024.107734,10.1016/j.icheatmasstransfer.2024.107734,agrees,skip,identical in both files; the hand check carries over,373
+D,NO_DOI,,,n/a,skip,entry carries no DOI by design,
+D1,BASE_ONLY,10.1016/j.energy.2023.128732,,n/a,skip,unclassified,398
+D2,CONFIRMED,10.1016/j.est.2023.107015,10.1016/j.est.2023.107015,n/a,skip,identical in both files; the hand check carries over,405
+D3,BASE_ONLY,10.3390/nano15040302,,n/a,skip,unclassified,410
+D4,CONFIRMED,10.1016/j.ijheatmasstransfer.2010.11.017.,10.1016/j.ijheatmasstransfer.2010.11.017.,n/a,skip,identical in both files; the hand check carries over,413
+E,NO_DOI,,,n/a,skip,entry carries no DOI by design,
+E1,CONFIRMED,10.1016/j.enconman.2020.113025,10.1016/j.enconman.2020.113025,agrees,skip,identical in both files; the hand check carries over,429
+E2,NO_DOI,,,n/a,skip,entry carries no DOI by design,
+E3,CONFIRMED,10.1016/j.enconman.2023.117551,10.1016/j.enconman.2023.117551,agrees,skip,identical in both files; the hand check carries over,450
+E4,CONFIRMED,10.1016/j.ijhydene.2025.01.360,10.1016/j.ijhydene.2025.01.360,n/a,skip,identical in both files; the hand check carries over,463
+F,NO_DOI,,,n/a,skip,entry carries no DOI by design,
+F1,CONFIRMED,10.1016/j.enconman.2023.118046,10.1016/j.enconman.2023.118046,agrees,skip,identical in both files; the hand check carries over,478
+F2,CONFIRMED,10.3390/en16124755,10.3390/en16124755,agrees,skip,identical in both files; the hand check carries over,491
+F3,CONFIRMED,10.1016/j.energy.2022.124286,10.1016/j.energy.2022.124286,agrees,skip,identical in both files; the hand check carries over,513
+G,NO_DOI,,,n/a,skip,entry carries no DOI by design,
+G1,CONFIRMED,10.1063/5.0086032,10.1063/5.0086032,n/a,skip,identical in both files; the hand check carries over,528
+G2,CONFIRMED,10.1016/j.energy.2023.126838,10.1016/j.energy.2023.126838,agrees,skip,identical in both files; the hand check carries over,539
+G3,CONFIRMED,10.1016/j.enconman.2023.116989,10.1016/j.enconman.2023.116989,agrees,skip,identical in both files; the hand check carries over,550
+H,NO_DOI,,,n/a,skip,entry carries no DOI by design,
+H1,CONFIRMED,10.1109/4235.996017,10.1109/4235.996017,n/a,skip,identical in both files; the hand check carries over,564
+H2,CONFIRMED,10.1016/j.energy.2024.131548,10.1016/j.energy.2024.131548,agrees,skip,identical in both files; the hand check carries over,574
+H3,CONFIRMED,10.3390/en18092189,10.3390/en18092189,n/a,skip,identical in both files; the hand check carries over,585
+H4,CONFIRMED,10.1007/s11708-024-0922-z,10.1007/s11708-024-0922-z,n/a,skip,identical in both files; the hand check carries over,596
+H5,CONFIRMED,10.1109/GPECOM61896.2024.10582632,10.1109/GPECOM61896.2024.10582632,n/a,skip,identical in both files; the hand check carries over,607
+I,NO_DOI,,,n/a,skip,entry carries no DOI by design,
+I1,CONFIRMED,10.1007/s44444-025-00052-4,10.1007/s44444-025-00052-4,n/a,skip,identical in both files; the hand check carries over,623
+I2,CONFIRMED,10.1016/j.esr.2020.100493,10.1016/j.esr.2020.100493,agrees,skip,identical in both files; the hand check carries over,634
+I3,CONFIRMED,10.1016/j.rser.2019.109642,10.1016/j.rser.2019.109642,agrees,skip,identical in both files; the hand check carries over,643
+I4,CONFIRMED,10.1038/s41598-025-97236-4,10.1038/s41598-025-97236-4,n/a,skip,identical in both files; the hand check carries over,653
+I5,CONFIRMED,10.1016/j.seta.2020.100763,10.1016/j.seta.2020.100763,agrees,skip,identical in both files; the hand check carries over,664
+I6,CONFIRMED,10.3390/en17112719,10.3390/en17112719,n/a,skip,identical in both files; the hand check carries over,676
+I7,CONFIRMED,10.1016/j.enconman.2022.115366,10.1016/j.enconman.2022.115366,agrees,skip,identical in both files; the hand check carries over,687
+I8,CONFIRMED,10.1109/ACCESS.2023.3344752,10.1109/ACCESS.2023.3344752,n/a,skip,identical in both files; the hand check carries over,699
+I9,CONFIRMED,10.1016/j.rineng.2025.105653,10.1016/j.rineng.2025.105653,n/a,skip,identical in both files; the hand check carries over,711
