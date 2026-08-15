@@ -323,11 +323,17 @@ def main():
         d = 100.0 * (b["annual_energy_kWh"] - a["annual_energy_kWh"]) / a["annual_energy_kWh"]
         say("MAP RESOLUTION (THESIS_SYNTHESIS.md §17 step 2)")
         say("   n=5 vs n=3 on annual energy: %+.3f %%" % d)
-        say("   %s" % ("A 3-point map is defensible: the surface is nearly resolution-free, so "
-                       "screening can use the cheap map."
-                       if abs(d) < 1.0 else
-                       "The 3-point map is NOT adequate -- resolution changes the annual answer "
-                       "materially, so screening must budget for the denser map."))
+        if abs(d) < 1.0:
+            say("   Adequate FOR SCREENING: the shift is small and, being a property of the")
+            say("   surface rather than of any one design, is expected to move all designs the")
+            say("   same way -- so Morris rankings survive it and can use the cheap map.")
+            say("   NOT a convergence claim. This is a single 3->5 step; SAM's own default")
+            say("   surface is 20 points per axis, and neither 3 nor 5 has been shown converged")
+            say("   against it. A FINAL reported annual number should use the densest map that")
+            say("   the build budget allows, and quote this delta as its resolution uncertainty.")
+        else:
+            say("   The 3-point map is NOT adequate -- resolution changes the annual answer")
+            say("   materially, so screening must budget for the denser map.")
     s = by.get("steam_same_T")
     if a and s and a.get("annual_energy_kWh") and s.get("annual_energy_kWh"):
         d = 100.0 * (a["annual_energy_kWh"] - s["annual_energy_kWh"]) / s["annual_energy_kWh"]

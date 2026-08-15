@@ -723,8 +723,28 @@ trap, since its denominator is that case's own 22.9 MW nameplate. **Not quotable
   and §11 item 2 closed; `THESIS_SYNTHESIS.md` §1.1, §1.2, §9 (rewritten, superseded diagnosis
   retained under a collapsed block), §12, §13, §14, §15, §17.
 
-**Next.** §11 item 3 — wire the decision vector. Two things settle first, both now quantified
-rather than guessed: (a) the **map resolution** question — an n=5 build is running for the annual
-comparison against n=3; (b) the **build-cost partition** — SM and t_TES need only a ~30 s tower run
-against an existing map, while the six cycle variables force a ~35 min rebuild, so Morris must be
-budgeted against that split or it implies tens of hours of map generation alone.
+### 6. Map resolution — settled the same session
+
+`results/integrated_annual_20260815T095718Z.*`. The n=5 map (45 rows) was built and run against
+the n=3 map (27 rows) at an identical design point:
+
+| map | annual kWh | nameplate kW | rec pump |
+|---|---|---|---|
+| n=3 (27 rows) | 440,206,500 | 62,612.0 | 49.55 MW |
+| n=5 (45 rows) | 442,092,058 | 62,586.5 | 49.55 MW |
+
+**+0.428 %.** Small enough that **Morris screening may use the cheap 3-point map** — the shift is
+a property of the response surface, not of any one design, so elementary-effect *rankings* should
+survive it. ⚠ **Not a convergence claim.** This is a single 3 → 5 step; SAM's own default surface
+is **20** points per axis and neither 3 nor 5 was shown converged against it. A final reported
+annual figure should use the densest affordable map and quote **±0.43 %** as resolution
+uncertainty — treating 440.21 GWh as exact would repeat this session's own mistake of promoting an
+unmeasured assumption to a result.
+
+**Next.** §11 item 4 — wire the decision vector, then Morris. The build-cost partition must be
+designed first: SM and t_TES need only a ~30 s tower run against an existing map, while the six
+cycle variables force a ~35 min rebuild each — and note **φ forces a rebuild too**, since it
+enters through the HTF property table and therefore changes the PHX. A naive (10+1)×r Morris
+design implies tens of hours of map generation alone; cache maps per cycle-design instead.
+Add the new §9.5b constraint to the vector: the integrated design sits at a 166.7 K loop ΔT and
+spends ≈43 % of gross on pumping, so ΔT is an active variable, not a passive outcome.

@@ -241,6 +241,19 @@ Ordered. Each item blocks the ones below it. **Nothing in §12 competes with the
      that a fully determined design is "over-constrained for UDPC generation" is **refuted** —
      as is the 93.6 s loose-bundle control, which has never reproduced and in fact **fails**
      after 2026 s with a real ssc diagnostic.
+   - ✅ **INTEGRATED ANNUAL RESULT DELIVERED** — `scripts/run_integrated_annual.py`,
+     `results/integrated_annual_20260815T095718Z.*`. Morocco TMY, nano-chloride 0.7 wt%:
+     **440.21 GWh, 62,612 kW net** (n=3 map) · 442.09 GWh (n=5) · **389.39 GWh** for an
+     identically configured steam control → **+13.05 % for the sCO₂ block**, which tests the
+     §7.5 inference rather than asserting it.
+   - ✅ **Map resolution settled:** 3 → 5 points per axis moves annual energy **+0.428 %**.
+     Screening may use the cheap 3-point map; a final figure needs the densest affordable map
+     and ±0.43 % resolution uncertainty. **Not** a convergence claim (SAM's default is 20/axis).
+   - ⚠️ **NEW CONSTRAINT the integrated model exposed.** The recompression cycle's recuperation
+     returns HTF at **533.3 °C** from a 700 °C source — only **166.7 K** loop ΔT — costing
+     **49.55 MW of receiver pumping, ≈43 % of gross**. Feasible (positive nameplate) but heavily
+     penalised. This reproduces §10's ΔT–pumping law to **0.3 %** without being fitted to it, and
+     it means ΔT must be an active variable in the optimisation, not a passive outcome.
 3. **Wire the decision vector** — expose all 10 variables of §3 as model inputs with validated
    ranges, so screening can drive them.
 4. **Morris screening** (§7) over the 10 variables. ← **THE GUARANTEED DELIVERABLE.**

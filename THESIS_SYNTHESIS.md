@@ -1273,7 +1273,8 @@ Morocco/Ouarzazate TMY, nano-chloride at 0.7 wt% through `rec_htf = 50`, the n=3
 
 | Case | Power block | Annual energy | Nameplate (net) | Loop ΔT | W_pump,rec,des |
 |---|---|---|---|---|---|
-| `sco2_n3` | sCO₂ recompression (UDPC) | **440.21 GWh** | **62,612 kW** | 166.7 K | 49.55 MW |
+| `sco2_n3` | sCO₂ recompression, 3 pts/axis | **440.21 GWh** | 62,612 kW | 166.7 K | 49.55 MW |
+| `sco2_n5` | sCO₂ recompression, 5 pts/axis | **442.09 GWh** | 62,587 kW | 166.7 K | 49.55 MW |
 | `steam_same_T` | steam Rankine (control) | 389.39 GWh | 22,945 kW | 166.7 K | 86.73 MW |
 
 **(a) The §7.5 attribution is now tested, not inferred.** §7.5 explained the chloride's −9.6 %
@@ -1310,6 +1311,20 @@ A property model, a plant coupling and a power-cycle map — built separately, v
 **(d) The §7.7 trap, caught live.** `capacity_factor` came back at **193.73 %** for the steam
 case. It is not a bug: the denominator is that case's own 22.9 MW nameplate. It is a standing
 demonstration of why CF must never be compared across cases whose design changes.
+
+**(e) Map resolution — the §17 question, answered, and answered narrowly.** Going from 3 to 5
+points per axis moves annual energy by **+0.428 %** (440.21 → 442.09 GWh) at an identical design
+point, identical `ud_f_W_dot_cool_des` and identical pumping.
+
+> **What this licenses, and what it does not.** It licenses using the **cheap 3-point map for
+> Morris screening**: the shift is a property of the response surface rather than of any one
+> design, so it should displace all designs in the same direction and leave elementary-effect
+> *rankings* intact. It is **not a convergence claim.** This is a single 3 → 5 step; SAM's own
+> default surface is **20** points per axis, and neither 3 nor 5 has been demonstrated converged
+> against it. **A final reported annual figure should use the densest map the build budget
+> allows and quote ±0.43 % as its resolution uncertainty** — the alternative, treating 440.21 GWh
+> as exact, would repeat this chapter's own mistake of promoting an unmeasured assumption to a
+> result.
 
 ---
 
@@ -1575,6 +1590,7 @@ caught by a conservation check rather than by inspection.
 | `scripts/build_udpc_map.py` | The UDPC bridge: design point, 13→7 inverse-split transform, `--selftest`, tower load with guarded cooling scale | `udpc_design_only_*.md`, `udpc_map_*.md`, `maps/sco2_udpc_phi*_n*_{tower7,peraxis}.csv` |
 | `scripts/udpc_convergence_bisect.py` | Convergence lattice. **Stage 1/2 walk from the loose bundle — that origin is void; stage 3 walks from case F** and is the direction to use | `udpc_bisect_*.{md,csv}` |
 | `scripts/check_udpc_cooling_scale.py` | Units check for the cooling response; establishes `ud_f_W_dot_cool_des` from `cooler_tot_W_dot_fan` in 0.1 s without the ~35-min sweep | `udpc_cooling_scale_*.md` |
+| `scripts/run_integrated_annual.py` | **The integrated plant, 8760 h.** Nano-chloride tower + sCO₂ UDPC block; steam control; map-resolution comparison; magnitudes taken from a live design solve, never hardcoded | `integrated_annual_*.{md,csv}` |
 | `scripts/smoke_test.py` | Environment-health baseline at placeholder conditions (720 °C / 25 MPa / f 0.30) | terminal |
 
 ### 15.2 Knowledge files
@@ -1646,25 +1662,26 @@ load-bearing ones for the thesis:
 1. ~~Re-establish the bisection control~~ · ~~Resolve the UDPC convergence question~~ — **both done
    2026-08-14.** The control is a genuine failure (§9.3), the sweep converges at case F, and the
    modelling decision they were expected to force is not needed.
-2. **Confront the map build cost, because it now sets the shape of the whole optimisation.** A map
-   is **~35 min at 3 points per axis**, and SAM's own default surface is 20 points per axis. Two
-   consequences that must be settled *before* screening, not during it:
-   - **Resolution.** Establish what a 3-point surface costs in annual-energy accuracy against a
-     denser one. Run 5 points per axis once and compare the annual result through the tower; if
-     the difference is small, 3 is defensible and cheap, and that comparison is itself a
-     reportable result.
-   - **Which variables actually need a rebuild.** SM and t_TES (#1, #2) do not touch the power
-     block — they need only a tower run (~20–40 s) against an existing map. The cycle variables
-     (φ, T_HTF, T_t,in, P_H, PR, f_RC) do. **Partition the decision vector on this line and cache
-     maps per cycle-design**, or a naive Morris design at (10+1)×r evaluations implies tens of
-     hours of map generation alone.
-3. **Wire the decision vector** — expose all ten variables with the validated ranges of §11,
+2. ✅ **Map resolution — settled 2026-08-15.** 3 → 5 points per axis moves annual energy by
+   **+0.428 %**, so **screening may use the cheap 3-point map** while a final reported figure uses
+   the densest affordable map and carries ±0.43 % as resolution uncertainty (§9.5e). Not a
+   convergence claim — SAM's default is 20 points per axis.
+3. **Partition the decision vector by build cost before designing the Morris experiment.** This
+   now sets the shape of the whole optimisation. SM and t_TES (#1, #2) do not touch the power
+   block — they need only a tower run (~20–40 s) against an existing map. The six cycle variables
+   (φ, T_HTF, T_t,in, P_H, PR, f_RC) force a **~35 min** rebuild each. **Cache maps per
+   cycle-design and partition on that line**, or a naive (10+1)×r design implies tens of hours of
+   map generation alone. Note φ enters through the HTF property table, so it changes the PHX and
+   therefore *does* require a rebuild despite being a fluid variable.
+4. **Wire the decision vector** — expose all ten variables with the validated ranges of §11,
    including the hard constraints (φ ≤ 2.0 wt%, T_cold ≥ 450 °C, T_hot ≤ 700 °C,
-   `system_capacity > 0`).
-4. **Run the Morris screening** — the guaranteed deliverable, now unblocked. Budget it against
-   step 2's partition rather than against a flat per-evaluation cost.
-5. **Extend the exergy layer to the integrated model**, adding receiver, TES and tank Ė_D terms.
-6. **NSGA-II** over the pruned decision vector (stretch).
+   `system_capacity > 0`). Add the constraint this session produced: the integrated design runs at
+   a **166.7 K loop ΔT** and spends ≈43 % of gross on receiver pumping (§9.5b), so ΔT is an active
+   objective-shaping variable, not a passive outcome.
+5. **Run the Morris screening** — the guaranteed deliverable, now unblocked. Budget it against
+   step 3's partition rather than against a flat per-evaluation cost.
+6. **Extend the exergy layer to the integrated model**, adding receiver, TES and tank Ė_D terms.
+7. **NSGA-II** over the pruned decision vector (stretch).
 
 **Deferred validation hardening** — defensive depth for the viva, not modelling risk, with the
 restart trigger *"after Morris screening is delivered"*:
