@@ -258,8 +258,8 @@ def case_table_too_narrow():
 
     CLAUDE.md §6 warns "cover the full operating temperature span -- ssc interpolates and will
     not extrapolate gracefully", without saying whether that means a clean error, a silent
-    extrapolation, or a crash. Which it is decides whether the optimiser needs a guard when it
-    sweeps T_HTF (decision variable #5), so a failure here is a RESULT, not a bug.
+    extrapolation, or a crash. Which it is decides whether the T_HTF sweep (decision variable #5)
+    needs a guard on its table span, so a failure here is a RESULT, not a bug.
 
     *** THIS CASE IS INCONCLUSIVE BY CONSTRUCTION, AND THAT IS THE FINDING. ***
     Three of the four A1 correlations are EXACTLY LINEAR in T -- rho = 1958.8438 - 0.56355T,
@@ -281,8 +281,8 @@ def case_table_min_rows():
     grid density. Because mu is exponential in T, a 3-point chord is the worst linear
     approximation of it this study will ever hand SAM. If the annual result and the pumping
     parasitic move, grid density matters and the table must be dense; if they do not, then mu
-    is not driving the field/TES answer -- which is worth knowing for objective O3 before the
-    optimiser starts sweeping.
+    is not driving the field/TES answer -- which is worth knowing about the pumping-power metric
+    before the parametric sweep campaign starts.
     """
     return _chloride_case(PHI_REFERENCE, CHLORIDE_T_HOT_C, CHLORIDE_T_COLD_C,
                           T_grid=[450.0, 575.0, 700.0])

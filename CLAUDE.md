@@ -3,11 +3,32 @@
 > Read this before touching anything. It is written so a **fresh Code session or a brand-new
 > account** can run the pipeline cold with zero prior context. Companion to `MASTER_PLAN.md`.
 
-**Last updated:** 2026-08-14 — Session F (**the UDPC blocker is cleared: the sweep converges at the
-full case F design in ~38 min; it was never over-constrained, only slower than every timeout used
-to test it — see §4.15**)
+**Last updated:** 2026-08-15 — Session G (**the supervisor removed multi-objective optimisation
+from the thesis; the objectives were reissued and the whole knowledge base realigned — see
+`MASTER_PLAN.md` §1 and `DECISIONS.md` D5**). Previously Session F: the UDPC blocker is cleared —
+the sweep converges at the full case F design in ~38 min; it was never over-constrained, only
+slower than every timeout used to test it (§4.15).
 **Machine:** Windows 11 Pro 10.0.26200, win32
 **Repo root:** `C:\Users\chukw\code\moo-nehtf-sco2-brayton-cycle`
+**⚠ The `moo-` in that path is legacy** — it stood for *multi-objective optimisation*, which is no
+longer in scope. The directory is deliberately **not** renamed (every absolute path in this file
+would break). Treat the name as historical.
+
+### 0.1 WHAT THE PROJECT IS NOW (read before planning any run)
+
+The five objectives in `MASTER_PLAN.md` §1 replaced the previous set on 2026-08-15. For a Code
+session the operational difference is small but it changes what runs are worth launching:
+
+- **No optimiser is ever invoked.** No NSGA-II, no `pymoo`. If you find yourself designing a search,
+  you are working from the old plan.
+- **The deliverable is a dense parametric sweep**, and Objective 4 needs a **φ = 0 base-salt control
+  at every swept point** — so budget roughly twice the runs you first estimate.
+- **Cost is the binding constraint.** Anything touching the cycle or the HTF forces a **~35 min**
+  UDPC map rebuild (§4.15); SM and t_TES do not. Partition the grid on that line and cache maps
+  per cycle-design, or the campaign is unaffordable.
+- **Two representation gaps are blocking, not cosmetic:** particle size `d_p` is named as a swept
+  parameter and is in no model layer, and the Southern Africa TMY needed by Objective 5 is missing
+  from this machine. Both are in `MASTER_PLAN.md` §10.
 
 ---
 
@@ -117,6 +138,14 @@ Run this whenever you touch the cycle model; it asserts on anything that drifts:
 
 ```powershell
 .\.venv\Scripts\python.exe -u .\scripts\validate_dostal.py
+```
+
+Objective-1 property evidence — the five property models over the full validity window, the
+provenance table, and the thermal-diffusivity round-trip against Han 2022. Pure Python, ~1 s,
+no PySAM. Run it whenever `nanofluid_properties.py` changes:
+
+```powershell
+.\.venv\Scripts\python.exe -u .\scripts\report_htf_properties.py
 ```
 
 Rebuilding the env from scratch on a new machine:
@@ -395,6 +424,33 @@ Two related traps found in the same investigation:
   +0.02 pp in η. Unpinning it is nearly free, which retires the modelling decision §9.4 of
   `THESIS_SYNTHESIS.md` had reserved.
 
+### 4.16 The Windows console is cp1252 — printing the µ, ₂, °, — you wrote to the .md file CRASHES
+
+Every result file in this project is written `encoding="utf-8"` and rightly carries real
+typography (µ, ₂, °C, ×, —). The **console** on this machine is **cp1252**, so echoing those same
+lines to stdout raises mid-run:
+
+```
+UnicodeEncodeError: 'charmap' codec can't encode character '₂' ... maps to <undefined>
+```
+
+The trap is the common `say()` pattern — one function that both `print`s a line and appends it to
+the report — which couples the artifact's encoding to the terminal's. It fails **partway through**,
+after the header has printed, so it reads like a logic error in whatever section it died in.
+
+**Do not fix this by stripping the artifact down to ASCII** — that degrades a thesis-facing table
+to satisfy a terminal. Transliterate on the way to the console only:
+
+```python
+def say(line=""):
+    print(line.encode("ascii", "replace").decode("ascii"), flush=True)   # console: cp1252
+    md.append(line)                                                      # file: utf-8, intact
+```
+
+Setting `PYTHONIOENCODING=utf-8` also works but is environmental — it silently reintroduces the
+crash on any machine that lacks it, so prefer the in-script fix. Hit and fixed 2026-08-15 in
+`scripts/report_htf_properties.py`.
+
 ---
 
 ## 5. WEATHER FILES AVAILABLE
@@ -407,11 +463,16 @@ In `data/tmy/` (gitignored — not committed, but on disk for every session):
 - `158192_31.05_-6.86_tmy-2022.csv` — NSRDB TMY, **lat 31.05, lon −6.86 = Ouarzazate region,
   Morocco.** Ready-made **MENA site** (added Session D, 2026-08-13).
 
-Previously tracked as "already downloaded by the user" at `C:\Users\meade\SAM Downloaded
-Weather Files\-28.2856_23.3667_..._nsrdb-msg-v1-0-0-tmy_60_tmy.csv` — **lat −28.29, lon 23.37 =
-Northern Cape, South Africa (Upington region), Objective 5 site.** **NOT FOUND on this machine**
-(checked under both `meade` and `chukw` user profiles, 2026-08-13) — needs re-downloading before
-next use. See `PROGRESS_LOG.md` 2026-08-13.
+⚠️ **BLOCKING as of 2026-08-15 — the Southern Africa TMY.** Previously tracked as "already
+downloaded by the user" at `C:\Users\meade\SAM Downloaded Weather
+Files\-28.2856_23.3667_..._nsrdb-msg-v1-0-0-tmy_60_tmy.csv` — **lat −28.29, lon 23.37 = Northern
+Cape, South Africa (Upington region), Objective 5 site.** **NOT FOUND on this machine** (checked
+under both `meade` and `chukw` user profiles, 2026-08-13). This was a footnote while Objective 5
+was post-defence; **the revised objectives put the climate-robustness study in scope, so nothing
+in Objective 5 can start until this file is back.** Re-download from NSRDB (same viewer that
+produced the Morocco file) into `data/tmy/`. It is cheap — do it before designing the sweep grid,
+not after running it, so the Objective-5 replication can reuse the campaign rather than repeat it.
+See `PROGRESS_LOG.md` 2026-08-13 and `MASTER_PLAN.md` §10.
 
 ---
 
@@ -470,7 +531,11 @@ receiver pump power against loop ΔT, all else equal:
 | 284 K (nitrate) | 8.49 MW | 101,663 kW |
 
 Roughly cubic, as mass flow ~ 1/ΔT in a friction-dominated loop. **Put a floor under T_hot in any
-sweep of decision variables #5/#6** rather than letting the optimizer discover it.
+sweep of decision variables #5/#6** rather than letting the sweep wander into the infeasible
+corner. ⚠ This matters *more* under the revised objectives than it did under the old plan: an
+optimiser would simply have avoided a bad corner, whereas a parametric sweep **reports across the
+whole declared range**, so an unfloored range publishes a response surface with an infeasible
+region silently baked into it. Declare the floor as a constraint of the study, not as a guard.
 
 **Grid density barely matters, and the reason is worth knowing.** ρ, cp and k are *exactly linear*
 in T in the A1 correlation set, so linear interpolation on any grid reproduces them to machine

@@ -1,10 +1,21 @@
 # VALIDATION.md
 
-> **GATE FILE.** Per `MASTER_PLAN.md` §2, nothing downstream (screening, MOO) is defensible until
-> the validations here pass. Two *decoupled* validations — power block and solar field/TES —
-> documented separately with their own % error tables.
+> **GATE FILE.** Per `MASTER_PLAN.md` §2, nothing downstream (screening, parametric sweeps, the
+> benefit envelope, the climate-robustness study) is defensible until the validations here pass.
+> Two *decoupled* validations — power block and solar field/TES — documented separately with their
+> own % error tables.
+>
+> ⬆ **The revised objectives (2026-08-15) make this file more load-bearing, not less.** Objective 3
+> now names "validate the integrated model by a decoupled strategy" **explicitly**, so the
+> decoupling argued for here on its merits (`DECISIONS.md` D4) is a stated requirement of the
+> thesis. And the results this gate protects are no longer a Pareto front's non-dominated subset
+> but a **response surface every point of which is reported** — a wider exposure, not a narrower
+> one. The single-design-point limitation of §2.3 therefore deserves more attention than before;
+> see `MASTER_PLAN.md` §12 item 1, whose priority was raised for exactly this reason.
 
-**Last updated:** 2026-08-13 — Session E (Code lane). **Power-block validation is COMPLETE across
+**Last updated:** 2026-08-15 — Session G: header rescoped to the revised objectives; **no
+validation result changed** (the gate is untouched by a scope change). Previously
+2026-08-13 — Session E (Code lane). **Power-block validation is COMPLETE across
 all 10 model nodes** — 8 by direct comparison (§2.3.4: 6 inside 1.1 % on h, η within +0.26 pp) and
 2 by conservation (§2.3.3a-R: junction closes exactly, recompressor relation exact). The 2 flagged
 nodes are both ends of the LTR/HTR interface and trace to a single specification difference,
@@ -463,11 +474,15 @@ allocation produces an unequal split, which equal-effectiveness specification ca
 > anchor for environment/ssc drift, not a validation result** — it still reproduces bit-for-bit.
 >
 > **Rationale for adopting.** The decisive argument is what the model is *for*: this project's
-> downstream work is exergy analysis and MOO, which are computed from **state points**, not from η.
-> Case A's HTR moved 8 % less heat than Dostal's, and that error lands squarely on the largest
-> exergy destroyer in the cycle (HTR, 1164 kW of 2966 kW). Case A was right about the bulk number
-> for the wrong reasons, through two errors that happened to cancel — an agreement that would not
-> survive moving off the design point, which is exactly what MOO does. Nothing in F is fitted: all
+> downstream work is exergy analysis and parametric sweeps, which are computed from **state
+> points**, not from η. Case A's HTR moved 8 % less heat than Dostal's, and that error lands
+> squarely on the largest exergy destroyer in the cycle (HTR, 1164 kW of 2966 kW). Case A was right
+> about the bulk number for the wrong reasons, through two errors that happened to cancel — an
+> agreement that would not survive moving off the design point, which is exactly what a full-range
+> sweep does. (This argument was originally written against MOO, which is now out of scope
+> (`DECISIONS.md` D5); it survives the rescope unchanged and in fact strengthens, since a sweep
+> visits and *reports* the off-design region rather than merely searching through it.) Nothing in
+> F is fitted: all
 > three settings are read from Dostal's own tables, with no free parameter tuned to land η on
 > 51.27 %.
 >
@@ -577,7 +592,7 @@ w_net 85.51 kJ/kg — so you can validate component work terms individually, not
 > ⏸ **EVERYTHING BELOW THIS LINE IS DEFERRED — see `MASTER_PLAN.md` §12.** The power-block gate
 > has **passed**; the remaining validation items are defensive depth for the viva, not modelling
 > risk, and they are parked so they stop competing with the sprint's guaranteed deliverable.
-> **Restart trigger: after the Morris screening is delivered** (`MASTER_PLAN.md` §11 item 4).
+> **Restart trigger: after the Morris screening is delivered** (`MASTER_PLAN.md` §11 item 5).
 - [x] Code lane: confirm §2.3.3a Checks 1 & 2 close numerically (validates LTR_HP_OUT, RC_OUT) —
       done Session E, results in §2.3.3a-R. **All 10 model nodes are now covered**: 8 by direct
       comparison, 2 by conservation. Provenance caveat on Checks 1–2 is discharged.

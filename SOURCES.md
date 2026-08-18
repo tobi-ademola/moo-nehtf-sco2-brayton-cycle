@@ -1,10 +1,18 @@
 # SOURCES.md
 
-> **Tally: 17 already logged + 33 newly added + **A0 Dostal 2004** (restored 2026-08-15) = 51 sources.**
+> **Tally: 17 already logged + 33 newly added + **A0 Dostal 2004** (restored 2026-08-15) +
+> **HS1 Morris 1991** and **HS2 Campolongo 2007** (added 2026-08-15) = 53 sources.**
 > Every pivotal source: citation, DOI, tool used, key numbers extracted.
 > Atomic + self-contained per MASTER_PLAN §8. Tool tags: [C]=Consensus, [C→W]=Consensus-found + web-verified, [W]=web fallback.
 
-**Last updated:** 2026-08-15 — reconciled against the hand-verified DOI set in `SOURCES - Copy.md`
+**Last updated:** 2026-08-15 — Session G. ⚠ **Objectives revised; multi-objective optimisation
+removed from scope** (`DECISIONS.md` D5). Consequences for this file, both structural rather than
+deletions: **§H is rescoped** into an in-scope screening lane (**HS1 Morris 1991**, **HS2
+Campolongo 2007** — both added, both Crossref-verified) and a retained-but-out-of-scope
+optimisation lane (H1–H5, unchanged and **not renumbered**, since `results/sources_doi_*` cite
+those IDs); and **§I is promoted from post-defence to core scope**, because Objective 5's
+MENA/Southern-Africa robustness study is no longer deferred. **No source was removed.** Previously
+2026-08-15 — reconciled against the hand-verified DOI set in `SOURCES - Copy.md`
 (`scripts/reconcile_sources_dois.py`): **17 DOIs confirmed**, **14 placeholders filled**, and every
 one of those 31 now carries an inline `*[DOI verified <date>]*` marker so the check survives the
 next rewrite. **All 14 conflicts were then adjudicated against Crossref and closed** (§J1) — the
@@ -19,7 +27,8 @@ and article number).
 
 > **Session D note on tool policy & quota.** Consensus was used first for every category
 > (4 searches, exhausting the month's free quota). Web search was used only as a documented
-> fallback for (a) canonical pre-2020 method references Consensus does not surface (NSGA-II),
+> fallback for (a) canonical pre-2020 method references Consensus does not surface (NSGA-II; and,
+> added 2026-08-15 by the same route, Morris 1991 and Campolongo 2007),
 > and (b) NREL/SAM system-modeling references that live in NREL's own publication registry
 > rather than the indexed journal corpus. Those are tagged [W]. All 2020–2026 journal entries
 > below were surfaced by Consensus and are tagged [C] (or [C→W] where a DOI/volume was
@@ -556,9 +565,58 @@ Conversion and Management* 284:116989.
 
 ---
 
-## H. MULTI-OBJECTIVE OPTIMIZATION METHODS (NSGA-II / Pareto; screening)
+## H. SCREENING, SENSITIVITY AND OPTIMISATION METHODS
 
-### H1. Deb et al. 2002 — canonical NSGA-II reference  [W]
+> **Section rescoped 2026-08-15 (`DECISIONS.md` D5).** Multi-objective optimisation was removed
+> from the thesis by the supervisor. This section is therefore split: **§H-S is the method
+> literature the project now uses**; **§H-M (H1–H5) is retained as method context and comparison,
+> not as a plan of work.** Nothing is deleted — those five entries remain the correct citations
+> for how comparable CSP studies are optimised, which is exactly what a related-work section and a
+> future-work section both need. Entry IDs H1–H5 are deliberately **not renumbered**: they are
+> referenced by the committed DOI-reconciliation artifacts in `results/`.
+
+### H-S. SCREENING & SENSITIVITY — the in-scope method lane
+
+Objective 3 names Morris elementary effects explicitly, so its canonical reference is load-bearing
+in a way it was not when Morris was merely a pruning step ahead of NSGA-II.
+
+#### HS1. Morris 1991 — canonical elementary-effects screening reference  [W]
+Morris, M. D. (1991). "Factorial Sampling Plans for Preliminary Computational Experiments."
+*Technometrics* 33(2):161–174.
+- **DOI:** 10.1080/00401706.1991.10484804  *[DOI verified 2026-08-15 — Crossref]*
+- **Why pivotal (pre-2020, unavoidable):** the method this thesis's screening *is*. Defines the
+  elementary effect, the one-factor-at-a-time-along-a-trajectory design, and the use of the mean
+  and standard deviation of the effects to separate negligible factors from influential ones and
+  to flag non-linearity/interaction. No substitute — it is the method's defining reference.
+- **Why [W]:** foundational method paper far outside the Consensus 2020+ window; Crossref-verified.
+- **Use:** cite wherever elementary effects, µ/σ, or trajectory-based screening design is invoked.
+  **This is the method reference for `MASTER_PLAN.md` §7 Stage 1 and `DECISIONS.md` D3.**
+
+#### HS2. Campolongo, Cariboni & Saltelli 2007 — the improved sampling and µ*  [W]
+Campolongo, F., Cariboni, J., Saltelli, A. (2007). "An effective screening design for sensitivity
+analysis of large models." *Environmental Modelling & Software* 22(10):1509–1518.
+- **DOI:** 10.1016/j.envsoft.2006.10.004  *[DOI verified 2026-08-15 — Crossref]*
+- **Why pivotal (pre-2020, unavoidable):** supplies the two refinements that make Morris usable in
+  practice and that any competent examiner will expect to see cited alongside it — **µ\***, the
+  mean of the *absolute* elementary effects, which stops effects of opposite sign cancelling and
+  hiding an influential factor; and an **optimised trajectory-selection strategy** that improves
+  coverage of the input space at the same evaluation budget. That budget argument is the whole
+  reason Morris was chosen here (`DECISIONS.md` D3), so this is not an optional refinement.
+- **Use:** cite with HS1 for the screening design; report **µ\* and σ**, not µ and σ.
+
+> **Gap, stated:** no *Sobol* method reference is logged, because Sobol is optional depth under the
+> revised objectives (D3 annotation) rather than a deferred necessity. Add Sobol 1993 / Saltelli
+> 2010 **only if** the variance decomposition is actually run.
+
+### H-M. MULTI-OBJECTIVE OPTIMISATION — retained as context, OUT OF SCOPE
+
+⚠ **The five entries below describe work this thesis no longer performs.** They remain valuable for
+(a) situating the project against how comparable CSP studies are optimised, and (b) the future-work
+chapter, which is where MOO now belongs. **Do not cite them as descriptions of this project's
+method.** In particular, phrases like "our NSGA-II + TOPSIS setup" in the Use lines below are
+**stale as of 2026-08-15** and are left in place only so the original intent is legible.
+
+#### H1. Deb et al. 2002 — canonical NSGA-II reference  [W]
 Deb, K., Pratap, A., Agarwal, S., Meyarivan, T. (2002). "A fast and elitist multiobjective
 genetic algorithm: NSGA-II." *IEEE Trans. Evolutionary Computation* 6(2):182–197.
 - **DOI:** 10.1109/4235.996017  *[DOI verified 2026-08-15]*
@@ -568,7 +626,7 @@ genetic algorithm: NSGA-II." *IEEE Trans. Evolutionary Computation* 6(2):182–1
 - **Why [W]:** foundational method paper predating the Consensus 2020+ window; web-verified DOI.
 - **Use:** cite wherever NSGA-II, crowding distance, or non-dominated sorting is invoked.
 
-### H2. Le Roux et al. 2024 — NSGA-II on CSP thermocline TES (exergy/enviro/econ)  [C]
+#### H2. Le Roux et al. 2024 — NSGA-II on CSP thermocline TES (exergy/enviro/econ)  [C]
 Le Roux, D. et al. (2024). "Multi-objective optimisation of a thermocline thermal energy
 storage integrated in a concentrated solar power plant." *Energy* 300:131548.
 - **DOI:** 10.1016/j.energy.2024.131548  *[DOI verified 2026-08-15 — Crossref]*
@@ -579,7 +637,7 @@ storage integrated in a concentrated solar power plant." *Energy* 300:131548.
 - **Use:** direct precedent for our NSGA-II + TOPSIS three-objective (exergy/enviro/cost) setup
   on a CSP-TES system; decision-making-method template.
 
-### H3. Ji et al. 2025 — NSGA-II on CSP-TES hybrid, DPSP vs LCOE + CRITIC/TOPSIS  [C]
+#### H3. Ji et al. 2025 — NSGA-II on CSP-TES hybrid, DPSP vs LCOE + CRITIC/TOPSIS  [C]
 Ji, C. et al. (2025). "Optimization of a Nuclear–CSP Hybrid Energy System Through
 Multi-Objective Evolutionary Algorithms." *Energies* 18(x).
 - **DOI:** 10.3390/en18092189  *[DOI verified 2026-08-15]*
@@ -589,7 +647,7 @@ Multi-Objective Evolutionary Algorithms." *Energies* 18(x).
 - **Use:** precedent for SM & storage-hours as decision variables and a reliability-vs-cost
   Pareto — mirrors our objective/variable choice; CRITIC/TOPSIS alternative to plain TOPSIS.
 
-### H4. Hu et al. 2024 — bi-level NSGA-II + LP for WP/PV/CSP-sCO₂ capacity-operation  [C]
+#### H4. Hu et al. 2024 — bi-level NSGA-II + LP for WP/PV/CSP-sCO₂ capacity-operation  [C]
 Hu, Y. et al. (2024). "Capacity-operation collaborative optimization of the system integrated
 with wind power/photovoltaic/concentrating solar power with S-CO₂ Brayton cycle." *Frontiers
 in Energy* 18.
@@ -600,7 +658,7 @@ in Energy* 18.
 - **Use:** precedent for coupling a capacity-level Pareto search with an operational sub-problem;
   method reference if we add a dispatch inner loop.
 
-### H5. Magno et al. 2024 — NSGA-II: CSP-TES vs PV-BESS, LCOE/performance trade-off  [C]
+#### H5. Magno et al. 2024 — NSGA-II: CSP-TES vs PV-BESS, LCOE/performance trade-off  [C]
 Magno, C.M.A. et al. (2024). "Comparison of Parabolic Trough Concentrated Solar Power and
 Photovoltaic Plants with and without Energy Storage using NSGA-II." *2024 6th Global Power,
 Energy and Communication Conference (GPECOM)*.
@@ -616,6 +674,16 @@ Energy and Communication Conference (GPECOM)*.
 ---
 
 ## I. SOLAR RESOURCE & CSP PERFORMANCE — MENA & Southern Africa (location robustness)
+
+> ⬆ **PROMOTED TO CORE SCOPE 2026-08-15.** These nine entries were collected against an Objective 5
+> that was *post-defence*. The revised objectives put the climate-robustness study **in scope**, so
+> this section now supports a required chapter rather than an optional one. Two practical notes for
+> whoever writes it: the study is a robustness claim about **the parametric performance maps**
+> (do their shape, and the sign and size of the nano benefit, survive a change of climate?), not a
+> site-selection exercise — several entries below *are* site-selection studies and should be cited
+> for method and resource data, not framing. And I5 (Ghana) is West rather than Southern Africa;
+> the committed Southern-African site is **Upington, Northern Cape** (lat −28.29, lon 23.37), whose
+> TMY file is **missing from this machine and must be re-downloaded** (`MASTER_PLAN.md` §10).
 
 ### I1. Hajou et al. 2025 — MENA/Mediterranean DNI zoning for CSP  [C]
 Hajou, A. et al. (2025). "Solar energy potential assessment in the MENA and Mediterranean

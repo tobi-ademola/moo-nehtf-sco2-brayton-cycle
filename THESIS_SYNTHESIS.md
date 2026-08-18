@@ -9,9 +9,12 @@
 > on inference rather than execution, it is labelled as such.
 >
 > **Compiled:** 2026-08-13 · **Revised:** 2026-08-14 (§1, §9, §12, §13, §17 — the UDPC
-> non-convergence finding is **withdrawn**; see §9.3) · **Repo HEAD at compilation:** `fb9fd48` ·
-> **Environment:** Python 3.13.15, NREL-PySAM 7.1.1.post1 (bundled ssc 306), numpy 2.5.2,
-> CoolProp 8.0.0, Windows 11.
+> non-convergence finding is **withdrawn**; see §9.3) · **Revised:** 2026-08-15 — ⚠ **the
+> supervisor removed multi-objective optimisation from the thesis and reissued the objectives**
+> (§2.1; `DECISIONS.md` D5). §1, §2, §11, §12, §13, §16 and §17 are realigned. **No result,
+> number or validation in this document changed** — a scope change moves the destination, not the
+> measurements. · **Repo HEAD at compilation:** `fb9fd48` · **Environment:** Python 3.13.15,
+> NREL-PySAM 7.1.1.post1 (bundled ssc 306), numpy 2.5.2, CoolProp 8.0.0, Windows 11.
 
 ---
 
@@ -24,7 +27,7 @@
 | 3 | Computational environment, tooling and reproducibility | Ch 3.2 |
 | 4 | **Module A — Nano-HTF thermophysical property model** (Objective 1) | Ch 3.3, Ch 4.1 |
 | 5 | **Module B — sCO₂ power block and its literature validation** (Objective 2) | Ch 3.4, Ch 4.2 |
-| 6 | **Module C — Component-level exergy layer** (Objective 2/3) | Ch 3.5, Ch 4.3 |
+| 6 | **Module C — Component-level exergy layer** (Objective 2) | Ch 3.5, Ch 4.3 |
 | 7 | **Module D — Nano-HTF ⇄ SAM plant coupling** (Objective 2) | Ch 3.6, Ch 4.4 |
 | 8 | **Module E — Solar field / TES baseline** (Objective 2) | Ch 3.7, Ch 4.5 |
 | 9 | **Module F — UDPC bridge: the integrated model** (Objective 2) — *partial* | Ch 3.8, Ch 4.6 |
@@ -43,8 +46,13 @@
 
 ### 1.1 The one-paragraph version
 
-This project set out to build an integrated CSP → nano-enhanced-HTF → TES → sCO₂ Brayton model and
-to optimise it multi-objectively over ten decision variables. Five of the six required modules were
+This project set out to build an integrated CSP → nano-enhanced-HTF → TES → sCO₂ Brayton model,
+screen its ten decision variables, and map its performance across their feasible ranges. (It was
+originally scoped to *optimise* the model multi-objectively over those ten variables; the
+supervisor removed multi-objective optimisation on 2026-08-15 as post-graduate work and reissued
+the objectives — §2.1. Nothing below was invalidated by that change, and two items previously
+deferred as post-defence — the nano-vs-base benefit envelope and the climate-robustness study —
+became in-scope deliverables.) Five of the six required modules were
 built and verified: a temperature- and loading-dependent nano-chloride property model anchored to
 measured data; an sCO₂ recompression power block that reproduces a published state-point table to
 **within 0.070 % in enthalpy at every node** and its thermal efficiency to **+0.019 percentage
@@ -65,22 +73,23 @@ returns an integrated annual result — **440.21 GWh at a 62.6 MW net nameplate*
 identically-configured steam block by **+13.05 %**, and exposing a new system-level tension in
 which the recompression cycle's own recuperation returns the HTF at 533 °C and so spends ≈43 % of
 gross on receiver pumping. That last number reproduces the independently-derived ΔT–pumping law of
-§7.4 to **0.3 %**. The Morris screening and NSGA-II optimisation were still not run, and that gap
-is now one of computational budget rather than of a blocked model layer.
+§7.4 to **0.3 %**. The Morris screening and the parametric sweep campaign were still not run, and
+that gap is now one of computational budget rather than of a blocked model layer.
 
 ### 1.2 Status board
 
 | # | Module | Objective served | Status | Evidence |
 |---|---|---|---|---|
-| A | Nano-HTF property model (ρ, cp, k, μ vs T and φ, with uncertainty bands) | Obj 1 | ✅ **Complete & self-validating** | `scripts/nanofluid_properties.py`, `results/sam_htf_table_0p7wt.csv` |
+| A | Nano-HTF property model (ρ, cp, k, **α**, μ vs T and φ, with uncertainty bands) | Obj 1 | ✅ **Complete & self-validating**; α added 2026-08-15 | `scripts/nanofluid_properties.py`, `scripts/report_htf_properties.py`, `results/htf_properties_*` |
 | B | sCO₂ recompression power block + node-by-node literature validation | Obj 2 | ✅ **Complete — validation gate PASSED** | `scripts/validate_dostal.py` + 4 checker scripts, 6 result sets |
-| C | Component-level exergy layer (per-node *e*, per-component Ė_D) | Obj 2, Obj 3 (min Ė_D) | ✅ **Method verified end-to-end** | `scripts/exergy_layer_check.py`, `results/exergy_layer_check_*` |
+| C | Component-level exergy layer (per-node *e*, per-component Ė_D) | Obj 2 | ✅ **Method verified end-to-end** (cycle-only; must be wired to the integrated model **before** the sweep campaign, or the campaign has to be re-run to collect Ė_D) | `scripts/exergy_layer_check.py`, `results/exergy_layer_check_*` |
 | D | Nano-HTF ⇄ SAM coupling (custom fluid inside the plant model) | Obj 2 | ✅ **Complete — question answered** | `scripts/htf_sam_bridge.py`, `results/htf_sam_bridge_*` |
 | E | Solar field / TES annual baseline | Obj 2 | ✅ **Baseline pinned** (GUI cross-check blocked, not required) | `VALIDATION.md` §1.3 |
 | F | UDPC bridge → integrated sCO₂ plant model | Obj 2 | ✅ **Map generates at the validated case F design** (~38 min/build; coarse at 3 pts/axis) | `scripts/build_udpc_map.py`, `scripts/udpc_convergence_bisect.py`, `results/udpc_bisect_20260814T194825Z.*` |
-| G | Morris elementary-effects screening | Obj 3 | ❌ **Not started** — **no longer blocked by F**; gated by map build cost | method fixed in `DECISIONS.md` D3 |
-| H | NSGA-II multi-objective optimisation | Obj 3/4 | ❌ **Not started** (was always stretch scope) | — |
-| I | Climate-robustness study (MENA + Southern Africa) | Obj 5 | ❌ **Post-defence scope**; Morocco TMY in hand, SA file missing | `data/tmy/` |
+| G | Morris elementary-effects screening | Obj 3 | ❌ **Not started** — **no longer blocked by F**; gated by map build cost | method fixed in `DECISIONS.md` D3; references `SOURCES.md` HS1/HS2 |
+| H | ~~NSGA-II multi-objective optimisation~~ | ~~Obj 3/4~~ | ⛔ **REMOVED FROM SCOPE 2026-08-15** by the supervisor as post-graduate work | `DECISIONS.md` D5 |
+| H′ | **Parametric sweep campaign → response surfaces + benefit envelope** | **Obj 3, Obj 4** | ❌ **Not started — now the terminal deliverable.** Needs a **φ = 0 base-salt twin at every swept point** (Obj 4 asks for a difference of two surfaces) and a `d_p` representation that does not yet exist (§11) | — |
+| I | Climate-robustness study (MENA + Southern Africa) | Obj 5 | ❌ **Not started — PROMOTED to core scope 2026-08-15** (was post-defence). Morocco TMY in hand; **Southern Africa file missing and now BLOCKING** | `data/tmy/` |
 
 ### 1.3 The five defensible findings
 
@@ -128,17 +137,50 @@ These are results, not activity — each is a claim that can survive cross-exami
 
 *(Chapter 3.1)*
 
-### 2.1 Objectives as set
+### 2.1 Objectives as set (revised 2026-08-15)
 
-1. Temperature- and concentration-dependent thermophysical models of the nano-enhanced molten-salt
-   HTF.
-2. Integrated CSP–nano-HTF–TES–sCO₂ Brayton model with energy, exergy, hydraulic and economic
-   assessment.
-3. Multi-objective optimisation of nanoparticle concentration, particle size and cycle operating
-   parameters for: max energy efficiency, min cost, min pumping power, max TES energy density, min
-   exergy destruction.
-4. *(Post-defence)* Pareto-optimal envelope and net benefit of nano-enhancement vs conventional salt.
-5. *(Post-defence)* Robustness of the Pareto-optimal configuration across MENA and Southern Africa.
+1. Temperature- and concentration-dependent thermophysical property models — **density, specific
+   heat, thermal conductivity, thermal diffusivity, viscosity** — for the CuO-enhanced
+   NaCl–KCl–MgCl₂ HTF, **with documented provenance for each correlation**.
+2. An **integrated model** of the CSP tower, the nano-enhanced HTF, the two-tank molten-salt
+   storage and the recompression sCO₂ Brayton cycle, equipped with **energy, exergy, hydraulic and
+   economic** assessments.
+3. **Validate** the integrated model by a **decoupled strategy**; **screen the ten decision
+   variables** by **Morris elementary effects**; and perform **systematic parametric sweeps** of
+   nanoparticle concentration, particle size and cycle operating parameters **across their full
+   feasible ranges**, producing **performance response surfaces**.
+4. Construct the **full parametric performance envelope** and quantify, **as a continuous function
+   of the varied parameters**, the **net benefit of nano-enhancement relative to the conventional
+   base salt**.
+5. Assess the **robustness of the parametric performance maps across contrasting climates** — MENA
+   and Southern Africa.
+
+> **These replaced the original objectives on 2026-08-15.** The previous Objective 3 was
+> *multi-objective optimisation* of the same parameters against five objectives (max energy
+> efficiency, min cost, min pumping power, max TES energy density, min exergy destruction), with
+> Objectives 4 and 5 — a Pareto envelope and its climate robustness — deferred as *post-defence*.
+> The supervisor removed MOO as post-graduate work. `DECISIONS.md` D5 records the decision and its
+> consequences in full.
+>
+> **What this means for Chapter 3.** Do not present the work as an optimisation study whose search
+> stage was omitted; present it as a **parametric characterisation study**, which is a coherent
+> design in its own right and is what was actually built. Three points are worth making explicitly,
+> because they are strengths of the new framing rather than concessions:
+>
+> 1. **A response surface reports its whole domain; a Pareto front reports only its non-dominated
+>    edge.** Every point of the envelope is published, including the bad and the infeasible
+>    regions — the negative-nameplate corner of §7.4 is a *result* here, where an optimiser would
+>    merely have avoided it.
+> 2. **Morris changes role, not method** (`DECISIONS.md` D3 annotation). It stops being a
+>    preprocessing step and becomes a reported finding — the ranked influence of ten variables with
+>    an interaction flag — which Objective 3 names in its own right.
+> 3. **The five old objectives survive as the reported metrics** (η, η_ex, ρ_TES, LCOE, W_pump,
+>    Ė_D). The modelling requirement is unchanged: they are now *mapped* over the envelope rather
+>    than traded off, which if anything demands them at *more* points, not fewer.
+>
+> **The load it adds** is honest and should be stated in Chapter 3's scope section: Objective 4
+> requires a **φ = 0 base-salt control at every swept point** (a difference of two surfaces, not a
+> single comparison), and Objectives 4–5 were previously out of scope entirely.
 
 ### 2.2 The decision vector
 
@@ -157,9 +199,18 @@ These are results, not activity — each is a claim that can survive cross-exami
 | 9 | sCO₂ | Pressure ratio | PR |
 | 10 | sCO₂ | Recompression fraction | f_RC |
 
-**Objectives:** max η_ex, max ρ_TES; min LCOE, min W_pump, min Ė_D.
-**Constraints / reported indicators:** ΔP_HTF ≤ max; T_HTF ≤ material limit; W_net ≥ min;
-Q_loss,TES, E_annual, Q̇_HTF–sCO₂.
+**Reported metrics** (these were the five *objectives* of the removed multi-objective formulation;
+under the revised objectives they are the responses **mapped over the envelope**): η_energy, η_ex,
+ρ_TES, LCOE, W_pump, Ė_D.
+**Constraints / reported indicators:** ΔP_HTF ≤ max; T_HTF ≤ material limit; T_cold ≥ 450 °C;
+`system_capacity > 0`; W_net ≥ min; Q_loss,TES, E_annual, Q̇_HTF–sCO₂.
+
+> **The vector's role changed on 2026-08-15.** These ten are no longer search dimensions; they are
+> the factors Morris screens and the axes the sweeps traverse. The practical consequence is that
+> each one now needs a **declared, defensible feasible range** more than it needs a gradient — a
+> sweep publishes results across its whole declared range, so an indefensible bound corrupts the
+> surface everywhere, whereas an optimiser would simply never have gone there. §11 gives the
+> current range and constraint for each.
 
 ### 2.3 The decomposition, and why it is the defensible one
 
@@ -184,29 +235,45 @@ each subsystem against the best available reference **for that subsystem**:
                        │                                        │
                        │        ┌───────────────────────┐       │
                        └────────┤  UDPC BRIDGE (§9)     ├───────┘
-                                │  ⚠ does not converge  │
+                                │  ✅ converges, ~38 min │
+                                │     per map build      │
                                 └───────────────────────┘
 ```
+
+*(The bridge box previously read "⚠ does not converge" — that finding was withdrawn on 2026-08-14;
+see §9.3. The box is corrected here because the diagram had outlived the retraction.)*
 
 **Frame this in the thesis as a methodological strength, not a workaround.** Validating the power
 block node-by-node against published *h* and *s* is a materially stronger claim than the
 efficiency-match that most comparable studies report, and it is only possible because PySAM exposes
-per-state entropy.
+per-state entropy. ⬆ **As of 2026-08-15 this framing is no longer only the project's own argument:
+the revised Objective 3 asks for validation "by a decoupled strategy" in those words**, so what was
+a defended choice is now a stated requirement that the work already satisfies.
 
-### 2.4 The four modelling decisions that were debated and resolved
+### 2.4 The modelling decisions that were debated and resolved
 
 Recorded in full in `DECISIONS.md`; summarised here because Chapter 3 must justify each.
 
 | # | Decision | Resolution | Basis |
 |---|---|---|---|
-| D1 | Include component-level exergy? | **IN** — build exergy-ready (carry *h* and *s* everywhere), switch the reporting layer on last | ssc exposes *s* natively → the +1 day CoolProp-reconstruction risk never materialised; `min Ė_D` is a named objective |
+| D1 | Include component-level exergy? | **IN** — build exergy-ready (carry *h* and *s* everywhere), switch the reporting layer on last | ssc exposes *s* natively → the +1 day CoolProp-reconstruction risk never materialised; exergy assessment is named in Objective 2 |
 | D2 | Nano-chloride inside SAM or coupled externally? | Originally "native nitrate in SAM, chloride in the coupling layer" — **subsequently superseded by execution**: `rec_htf = 50` accepts the chloride *inside* SAM (§7) | Mechanism confirmed by test, not assumed |
 | D3 | Screening method | **Morris elementary effects**, Sobol on survivors only | OAT misses interactions and is indefensible for 10 coupled variables; Sobol needs ~10³ evaluations at 20–40 s each |
 | D4 | Validation strategy | **Decoupled**, node-by-node on the power block | Forced — no sCO₂-tower case exists in SAM |
+| **D5** | **Multi-objective optimisation** | ⛔ **REMOVED from scope 2026-08-15** — replaced by screening + full-range parametric sweeps + benefit envelope + climate robustness | **Supervisor's instruction** (flagged as post-graduate work), not a technical finding |
 
 > **Note for Chapter 3.** D2's *conclusion* changed when it was tested. The thesis should present
 > this as evidence of a working method (a decision made under uncertainty, then falsified by
 > experiment and updated) rather than quietly presenting only the final answer.
+>
+> **D5 is a different kind of entry and should be presented as one.** D1–D4 are decisions this
+> project made and defended on technical grounds; D5 is a **scope instruction received**, and the
+> thesis should not dress it up as a methodological choice it argued for. What *is* the project's
+> own contribution is the reconciliation: D1's exergy layer, D3's screening and D4's decoupling all
+> survive the rescope intact, with only their *purposes* re-pointed (each carries a dated
+> annotation in `DECISIONS.md` saying how). That every prior decision remained valid under a
+> changed objective set is a reasonable thing to observe about the decomposition — it means those
+> decisions were made about the *model*, not about the deliverable.
 
 ---
 
@@ -265,9 +332,10 @@ describe.
 
 ### 3.4 Literature base
 
-`SOURCES.md` logs **50 sources** in ten categories (power-block validation targets; nano-HTF
+`SOURCES.md` logs **53 sources** in ten categories (power-block validation targets; nano-HTF
 properties; viscosity/MD; nano-cp mechanism; integrated system modelling; exergy analysis; sCO₂
-configurations; MOO methods; MENA/Southern-Africa solar resource; quality-exclusion notes). Each
+configurations; screening/sensitivity and optimisation methods; MENA/Southern-Africa solar
+resource; quality-exclusion notes). Each
 entry carries citation, DOI, the tool that found it ([C] = Consensus, [C→W] = Consensus-found and
 web-verified, [W] = web fallback), and the **specific numbers extracted** for use. One citation
 error found and corrected in-project: Battisti et al. 2023 was logged with the wrong issue and
@@ -488,7 +556,7 @@ with its physics **byte-for-byte unchanged**; only the docstring, an output path
 ### 5.1 Choice of validation anchor, and why the obvious candidates were rejected
 
 The requirement was a published sCO₂ recompression case reporting **per-node h and s**, not merely
-design-point efficiency — because the project's downstream work (exergy, MOO) is computed from state
+design-point efficiency — because the project's downstream work (exergy, parametric sweeps) is computed from state
 points, so an efficiency match validates nothing that matters.
 
 | Candidate | Verdict |
@@ -698,7 +766,7 @@ inference about the 120 m³ volume allocation. And the model now **produces** ne
 (`LTR_HP_OUT` 538.32 vs `RC_OUT` 539.22 kJ/kg), which was *predicted from Dostal's numbers
 beforehand* rather than imposed.
 
-**Why case F was adopted over the η-matching case A.** The downstream work is exergy and MOO, both
+**Why case F was adopted over the η-matching case A.** The downstream work is exergy and full-range parametric sweeps, both
 computed from **state points**, not η. Case A's HTR moved 8 % less heat, and that error lands
 squarely on the cycle's **largest exergy destroyer**. Case A was right about the bulk number for the
 wrong reasons — two cancelling errors — and such an agreement does not survive moving off the design
@@ -1332,7 +1400,7 @@ point, identical `ud_f_W_dot_cool_des` and identical pumping.
 
 *(Chapter 3.9 as method-hardening; Chapter 4.7 as a contribution in its own right)*
 
-Fifteen tool-level defects and traps were found by execution, each verified in this environment
+Sixteen tool-level defects and traps were found by execution, each verified in this environment
 rather than transcribed from any prior write-up. Several are **silent** — they produce plausible
 wrong numbers rather than errors — which is exactly why cataloguing them is a contribution to anyone
 else building on the same toolchain.
@@ -1354,6 +1422,7 @@ else building on the same toolchain.
 | **4.15** | **The UDPC sweep takes ~35 min and prints nothing while running** | Indistinguishable from a hang. Twelve experiments capped at 5–16 min produced a confident false finding of non-convergence that reached this synthesis. **"Did not finish inside my timeout" is not "hangs"** and carries no information until the timeout is justified against a measured completion. Related: `design_method = 1` is not a "loose" setting — it *adds* an inverse solve for recuperator conductance |
 | 4.13 | `Singleowner.from_existing()` must precede `execute()` | Otherwise the financial model sees a single `gen` record |
 | 4.14 | **A negative nameplate is not an error to ssc** | See §7.7 |
+| 4.16 | **The console encoding silently constrains what a report script may print** | Result files are written UTF-8 and rightly carry µ, ₂, °C, —; the Windows console is cp1252 and raises `UnicodeEncodeError` on the same characters. The common `say()` idiom — one function that both prints a line and appends it to the report — couples the artifact's encoding to the terminal's, and fails *partway through* a run, so it reads as a logic error in whatever section died. Transliterate on the way to the console (`line.encode("ascii", "replace")`); do **not** degrade the artifact to ASCII |
 
 **The pattern worth naming in the thesis:** the dangerous defects are not the ones that crash. They
 are 4.3, 4.9, 4.12 and 4.14 — each produces a complete, plausible, *wrong* result with no warning.
@@ -1395,15 +1464,38 @@ once named.
 | 7 | T_t,in | derived: `T_htf_hot − dT_PHX_approach` | ✅ exposed, validated at 700 °C, run at 680 °C | Dostal tables at 550/650/700 available for further validation |
 | 8 | P_H | `P_high_limit` + `is_P_high_fixed` | ✅ exposed, validated at 20 MPa | — |
 | 9 | PR | `is_PR_fixed` | ✅ exposed, validated at 2.6 | — |
-| 10 | f_RC | `is_recomp_ok` = −f | ✅ exposed, validated at 0.4097 | ⚠ **pinning may be incompatible with UDPC map generation** (§9.3) |
+| 10 | f_RC | `is_recomp_ok` = −f | ✅ exposed, validated at 0.4097 | ~~pinning may be incompatible with UDPC map generation~~ — **withdrawn**; pinned f_RC generates a map fine (§9.3) |
 
-> **The d_p gap, stated honestly.** Nanoparticle diameter is a named decision variable in the
-> supervisor's sheet, but the property module's enhancement fits are anchored to Han's series at
-> **fixed particle size** and carry no size dependence. The literature basis to add it exists — Wei
-> et al. (2024) report cp falling with larger particle size, with 20 nm MgO giving cp +38.2 % — but
-> it is not implemented. The defensible position is: **d_p is excluded from the current decision
-> vector for want of a size-resolved property anchor in this exact system, and that exclusion is
-> declared rather than silently absorbed.**
+> ⚠ **The d_p gap — and why 2026-08-15 changed its status from "declared" to "blocking".**
+> Nanoparticle diameter is represented in **no model layer**: the property module's enhancement
+> fits are anchored to Han's series at **fixed particle size** and carry no size dependence, so
+> sweeping d_p today would move nothing.
+>
+> Under the previous objectives this was defensible as a declared exclusion — d_p was one dimension
+> among ten in a search space, and an optimiser that never varies a dimension simply returns a
+> lower-dimensional answer, which one states and moves on. **The revised Objective 3 names particle
+> size explicitly as a swept parameter**, and that changes the failure mode entirely: sweeping a
+> variable the model cannot feel produces a *flat response surface*, which is not an absence of a
+> result but a **manufactured null result** — a finding that "particle size does not matter",
+> generated by the implementation rather than by the physics. That is the one outcome here that
+> would be actively misleading, so the gap must be closed or the sweep must not be run.
+>
+> **Three options, with their honest costs** (`MASTER_PLAN.md` §10; the choice must be recorded in
+> `DECISIONS.md`):
+>
+> - **(a) Analogue-grounded size correction from Wei et al. (2024)** (`SOURCES.md` B5): MgO in a
+>   *different* ternary chloride, cp falling with larger particle size, 20 nm giving cp +38.2 %.
+>   Cheapest, and it puts d_p on **exactly the same analogue footing the viscosity already stands
+>   on** — acceptable if declared with the same candour (§4.7's treatment is the template), not
+>   acceptable if presented as measured for CuO/A1.
+> - **(b) Source a size-resolved anchor for CuO in NaCl–KCl–MgCl₂** specifically. Strongest, and
+>   may not exist — the CuO/A1 literature is thin enough that the viscosity gap exists for the same
+>   reason.
+> - **(c) Sweep d_p only through the properties it can defensibly touch**, declaring the remainder
+>   size-invariant with a stated basis.
+>
+> Whichever is chosen, the reported surface must carry the provenance of its size dependence, since
+> Objective 1 demands documented provenance per correlation.
 
 ---
 
@@ -1411,19 +1503,32 @@ once named.
 
 *(Chapter 5.1)*
 
+*(Assessed against the **revised** objectives of §2.1. The previous assessment, written against the
+old objective set, is superseded; the underlying evidence is unchanged.)*
+
 | Obj | Requirement | Attained | Evidence | Gap |
 |---|---|---|---|---|
-| **1** | T- and φ-dependent thermophysical models of the nano-HTF | **✅ Substantially complete** | ρ, cp, k, μ with uncertainty bands, anchored to Han 2022 in the exact base salt; self-validating; two independent consumers | μ is analogue-grounded, not measured (declared); no d_p dependence |
+| **1** | T- and φ-dependent property models — ρ, cp, k, **α**, μ — **with documented provenance per correlation** | **✅ Substantially complete** | all five properties with uncertainty bands, anchored to Han 2022 in the exact base salt; **α added 2026-08-15**, derived as k/(ρ·cp) and round-tripped against Han's measured diffusivity ratios (+0.65/+1.02/+4.01 %, fully accounted for); provenance table emitted to disk by `scripts/report_htf_properties.py`; self-validating; two independent consumers | μ is analogue-grounded, not measured (declared); **no d_p dependence — now blocking, §11** |
 | **2** | Integrated CSP–nano-HTF–TES–sCO₂ model + energy/exergy/hydraulic/economic assessment | **✅ Attained at the model level, with an annual result** | Power block validated node-wise; exergy method verified; HTF↔plant coupling verified; field/TES baseline pinned; hydraulic assessment delivered as the ΔT–pumping law **and independently cross-validated to 0.3 % by the integrated run**; UDPC map generates at the validated design; **integrated annual result 440.21 GWh, nameplate 62.6 MW (§9.5)** | Map is coarse (3 pts/axis) at ~35 min per build; exergy layer still cycle-only (no receiver/TES/tank terms); economic assessment limited to what `Singleowner` returns; no LCOE study |
-| **3** | Multi-objective optimisation over the decision vector | **❌ Not attained** | Method selected and justified (Morris → Sobol → NSGA-II); all objective functionals are computable (η, Ė_D, W_pump, ρ_TES) | **No longer blocked by a broken model layer** — gated by map build cost, which requires partitioning the decision vector into cycle-design variables (rebuild) and plant variables (reuse). No screening run |
-| **4** | Pareto envelope, nano vs conventional benefit | **◐ Partially pre-empted** | A six-point comparison already shows the interior loading optimum and quantifies nano vs bare vs nitrate (§7.5) | Not a Pareto envelope; single-point comparisons only. *Post-defence scope* |
-| **5** | Climate robustness (MENA + Southern Africa) | **◐ Infrastructure only** | Morocco/Ouarzazate TMY in hand and **already used for every HTF-bridge run** | Southern Africa (Upington) TMY missing and needs re-downloading. *Post-defence scope* |
+| **3** | Decoupled validation + Morris screening + full-range parametric sweeps → response surfaces | **◐ One of three parts attained** | **Decoupled validation: ✅ done and named as the requirement** (§5, §8; `DECISIONS.md` D4). Screening: method selected and justified with canonical references (`SOURCES.md` HS1/HS2); every response functional is computable (η, Ė_D, W_pump, ρ_TES) | **Screening not run** — gated by map build cost, which requires partitioning the vector into cycle-design variables (rebuild, ~35 min) and plant variables (reuse, ~30 s). **Sweeps not run**, and `d_p` cannot be swept meaningfully until §11's gap is closed |
+| **4** | Full parametric envelope; nano-vs-base benefit as a **continuous function** of the varied parameters | **◐ Pre-empted at six points, not as a function** | A six-point comparison shows the interior loading optimum and quantifies nano vs bare vs nitrate (§7.5); the integrated run adds an sCO₂-vs-steam comparison at +13.05 % (§9.5) | Point comparisons, not a surface. **Requires a φ = 0 base-salt twin at every swept point** — the single largest cost consequence of the revision. **No longer post-defence scope** |
+| **5** | Robustness of the parametric maps across MENA and Southern African climates | **◐ Infrastructure, one site of two** | Morocco/Ouarzazate TMY in hand and **already used for every HTF-bridge run and the integrated annual run** | Southern Africa (Upington) TMY **missing — now a hard blocker**, since this objective is no longer deferred. Re-download before designing the sweep grid so the replication reuses it |
 
-**The honest one-sentence summary for the viva:** *Objective 1 is met; Objective 2 is met at the
-model-construction level, with all five layers built and joined, though no integrated annual result
-is yet reported; Objective 3 is not attained, and the reason is the computational cost of the
-performance-map build plus a session lost to a measurement error that this document now reports
-rather than conceals.*
+**The honest one-sentence summary for the viva:** *Objective 1 is met, including the thermal
+diffusivity the revised wording added; Objective 2 is met, with all five layers built, joined and
+returning an integrated annual result; Objective 3 is one-third met — its decoupled validation is
+complete and is the project's strongest result, while its screening and sweeps are not run;
+Objectives 4 and 5 are pre-empted at isolated points but not delivered as envelopes, and the reason
+throughout is the computational cost of the performance-map rebuild, compounded by a session lost
+to a measurement error that this document reports rather than conceals.*
+
+> **A framing point worth rehearsing for the viva.** The removal of MOO is likely to be read as the
+> project having lost its hardest component. The accurate answer is that the hard part was never
+> the search — it was building a model whose off-design behaviour is trustworthy enough to be worth
+> searching, and that part is done and validated at state-point resolution. What replaced the
+> search is not easier in every respect: a Pareto front needs its objectives evaluated only where
+> the algorithm looks, whereas a response surface plus a base-salt control needs **every** metric at
+> **every** grid point, in **two** fluid configurations, at **two** sites.
 
 ---
 
@@ -1445,44 +1550,54 @@ rather than conceals.*
    confined to a lower band edge.
 5. **A disclosed density-convention divergence** from the anchor paper propagates ~0.4–3.8 % into
    Han's derived k; absorbed into the band (§4.8).
-6. **No d_p dependence** (§11).
+6. ⚠ **No d_p dependence** (§11) — **upgraded from a limitation to a blocker on 2026-08-15**, when
+   the revised Objective 3 named particle size as a swept parameter. A size-blind model swept over
+   d_p returns a flat surface, which reads as a physical null result and is not one.
 7. **Enthalpy datum (melting point) is not cross-checked against SAM's internal convention.**
+8. **Thermal diffusivity is derived, not independently measured against.** α = k/(ρ·cp) holds by
+   construction, so the round-trip against Han's measured ratios tests *consistency*, not accuracy;
+   an α error shared by k, ρ or cp would pass it. This is the right trade — an independent α fit
+   could drift out of the defining identity — but the claim being made should be stated precisely
+   as consistency (`PROPERTIES.md`).
 
 **Power block**
 
-8. **Single-author validation source.** All node-level validation is against Dostal (2004). The
+9. **Single-author validation source.** All node-level validation is against Dostal (2004). The
    *turbine-inlet-temperature* half of this objection is answerable at zero cost — his 550 °C and
    650 °C tables are already transcribed — but the *independent-source* half is not answerable from
    the current library. Dyreby is **circular** (SAM's block is built on his method); Battisti
    anchors the exergy ranking but not state points. Candidate independent anchors are identified
    (Padilla 2015, Moisseytsev & Sienicki 2009, Sarkar 2009) and deliberately not acquired.
-9. **f = 0.4097 is strong evidence, not proof** (§5.6 residual caveat).
-10. **Validated at one design point.** The optimiser sweeps T_t,in and f_RC; the model is validated at
-    a single point in that space.
+10. **f = 0.4097 is strong evidence, not proof** (§5.6 residual caveat).
+11. **Validated at one design point.** The parametric sweeps traverse T_t,in and f_RC across their
+    full ranges while the model is validated at a **single point** in that space. This limitation
+    grew teeth on 2026-08-15: a sweep publishes every point it visits, so the unvalidated region is
+    now *reported*, not merely searched. Mitigation is cheap and identified — Dostal's 550 °C and
+    650 °C tables are already transcribed and cover a 150 °C span (`MASTER_PLAN.md` §12 item 1).
 
 **Plant coupling**
 
-11. **The HTF comparison runs on a steam-Rankine block**, so it cannot show the chloride's true
+12. **The HTF comparison runs on a steam-Rankine block**, so it cannot show the chloride's true
     advantage — by construction, not oversight.
-12. **The grid-density robustness test is inconclusive by construction** (§7.6).
-13. **The A1 correlations are used at their validity ceiling** (700 °C); extrapolation to 800 °C is
+13. **The grid-density robustness test is inconclusive by construction** (§7.6).
+14. **The A1 correlations are used at their validity ceiling** (700 °C); extrapolation to 800 °C is
     author-endorsed but not exercised.
 
 **Integrated model**
 
-14. ~~**The UDPC off-design map does not converge**~~ — **withdrawn 2026-08-14; it converges in
+15. ~~**The UDPC off-design map does not converge**~~ — **withdrawn 2026-08-14; it converges in
     38 min at the full case F design.** What remains true is narrower and should be stated as
     such: the map is generated at **3 points per axis** against SAM's own default of 20, so it is
     a coarse performance surface, and at ~35 min per build the *resolution* is what is
     cost-limited — not the convergence.
-15. ~~**The bisection control did not reproduce**~~ — **resolved, and worse than "did not
+16. ~~**The bisection control did not reproduce**~~ — **resolved, and worse than "did not
     reproduce": the control configuration is the one setting that genuinely fails.** With
     `design_method = 1`, free pressures and a free `f_rc`, ssc runs 2026 s and then errors —
     *"Can't find a value of total recuperator conductance that achieves the target cycle
     efficiency."* The 93.6 s convergence recorded on 2026-08-13 has never been reproduced and
     should not be cited. Every stage-1 bisection cell inherited this configuration, so those five
     results are **void**, not merely uninterpreted.
-16. **A methodological failure inside this project is worth reporting in Chapter 5.** The
+17. **A methodological failure inside this project is worth reporting in Chapter 5.** The
     over-constraint diagnosis was built from twelve non-observations, each of which was a timeout
     rather than a result. It was internally consistent, had a plausible mechanism, matched a
     documented ssc failure mode (§4.3's collapse), and was wrong. The safeguard adopted — quote a
@@ -1491,20 +1606,42 @@ rather than conceals.*
 
 **Scope**
 
-17. **No SAM GUI cross-check** — blocked by environment; tests packaging, not physics.
-18. **Economic assessment is minimal.** No LCOE optimisation was run; `min LCOE` is a named
-    objective and remains unaddressed beyond what `Singleowner` returns by default.
-19. **Receiver/TES/tank exergy terms are not yet in the exergy layer** — cycle-only (§6.6).
+18. **No SAM GUI cross-check** — blocked by environment; tests packaging, not physics.
+19. **Economic assessment is minimal.** LCOE is a **reported metric** of the revised objectives
+    (it was `min LCOE`, an optimisation objective, before 2026-08-15) and remains unaddressed
+    beyond what `Singleowner` returns by default. The rescope does not retire this — Objective 2
+    names economic assessment explicitly, and Objective 4's benefit envelope is far more
+    persuasive in cost terms than in energy terms alone.
+20. **Receiver/TES/tank exergy terms are not yet in the exergy layer** — cycle-only (§6.6). Under
+    the revised objectives this must be closed **before** the sweep campaign runs, since Ė_D is one
+    of the metrics mapped over the envelope; retrofitting it means re-running the campaign.
+21. **Objectives 4 and 5 were scoped in on 2026-08-15 and have no delivered work.** They were
+    post-defence under the previous objective set, so the absence is a change of requirement rather
+    than a slipped commitment — but it is an absence, and the Southern Africa TMY needed by
+    Objective 5 is not even on this machine (`MASTER_PLAN.md` §10).
 
 ---
 
 ## 14. ANTICIPATED DEFENCE QUESTIONS, WITH GROUNDED ANSWERS
 
-**Q. You didn't finish the optimisation. What did you actually deliver?**
+**Q. Your topic was multi-objective optimisation. Where is it?**
+Removed from scope by my supervisor on 2026-08-15 as post-graduate work, and the objectives were
+reissued (§2.1). The thesis is a parametric characterisation study: decoupled validation, Morris
+screening of ten decision variables, and full-range parametric sweeps producing performance
+response surfaces, from which the benefit of nano-enhancement over the base salt is quantified as a
+continuous function and then tested across two climates. Two things are worth saying plainly. First,
+nothing built before the change was invalidated by it — every modelling decision (`DECISIONS.md`
+D1–D4) survives with only its *purpose* re-pointed, which is what you would expect of decisions
+made about the model rather than about the deliverable. Second, the replacement is not a reduced
+version of the original: a Pareto front evaluates its objectives only where the algorithm looks,
+whereas a response surface with a base-salt control needs every metric at every grid point, in two
+fluid configurations, at two sites.
+
+**Q. You didn't finish the sweeps. What did you actually deliver?**
 A validated model and a set of findings. Specifically: a power block reproducing a published
 state-point table to 0.070 % at every node; a property model self-validating against measured
 anchors; a verified exergy method closing to 1.5×10⁻⁴; a quantified physical constraint coupling two
-decision variables that would have corrupted the optimisation had it been run naively; and a
+decision variables that would have corrupted a naive sweep of the parameter space; and a
 working sCO₂ ⇄ annual-plant bridge whose novel component, the undocumented table transform, is
 verified independently of the solver. The screening was not run because each performance-map build
 costs ~35 minutes and a session was lost to a measurement error I found and corrected — not because
@@ -1525,7 +1662,7 @@ manual (`CLAUDE.md` §4.15).
 Because the requirement was per-node *h* and *s*, and almost nobody publishes them. Dostal publishes
 full state tables for three designs. Recent candidates (Turchi 2013, Chacartegui 2011, Mammadov
 2026) give configuration-level efficiency only, which would validate nothing the downstream exergy
-and MOO work depends on.
+and parametric-sweep work depends on.
 
 **Q. Isn't matching one paper at one point a coincidence?**
 Two answers. First, it is not one number — it is eight independent nodes in four quantities plus two
@@ -1606,7 +1743,8 @@ interpreted as a result.
 
 | Script | Purpose | Key outputs |
 |---|---|---|
-| `scripts/nanofluid_properties.py` | **Objective 1 property model.** φ, T → {ρ, cp, k, μ} with bands; SAM 7-column export; self-validation | `results/sam_htf_table_0p7wt.csv` |
+| `scripts/nanofluid_properties.py` | **Objective 1 property model.** φ, T → {ρ, cp, k, **α**, μ} with bands; SAM 7-column export; self-validation incl. the α round-trip | `results/sam_htf_table_0p7wt.csv` |
+| `scripts/report_htf_properties.py` | **Objective 1 evidence artifact.** Provenance table per correlation + all five properties over 450–700 °C at five loadings + the thermal-diffusivity round-trip against Han 2022. Pure Python, ~1 s | `htf_properties_*.{md,csv}` |
 | `scripts/validate_dostal.py` | The validated sCO₂ cycle. Case F baseline + legacy case A + effectiveness sweep; mixer, second-law, power and energy balances; CoolProp cross-check | `dostal_validation_*.md`, `dostal_state_points_*.csv`, `dostal_recup_sweep_*.csv` |
 | `scripts/compare_dostal_nodes.py` | Node-by-node error table vs Table 10.4 | `dostal_node_errors_*.{md,csv}` |
 | `scripts/check_untabulated_nodes.py` | Conservation validation of `LTR_HP_OUT` and `RC_OUT`; internal/absolute variants | `dostal_junction_checks_*.{md,csv}` |
@@ -1625,11 +1763,11 @@ interpreted as a result.
 | File | Role |
 |---|---|
 | `MASTER_PLAN.md` | Single source of truth: objectives, critical path, decision variables, deferred backlog |
-| `CLAUDE.md` | Operating manual: exact versions, run commands, **the 14-item defect catalogue**, HTF fluid codes, pinned sanity baselines |
+| `CLAUDE.md` | Operating manual: exact versions, run commands, **the 16-item defect catalogue**, HTF fluid codes, pinned sanity baselines |
 | `VALIDATION.md` | The gate file: reference cases, transcribed Dostal tables (all three designs), node map, every error table, the exergy tables |
-| `SOURCES.md` | 50 sources with DOI, discovery tool, and extracted numbers |
-| `PROPERTIES.md` | Property provenance map and the viscosity defence |
-| `DECISIONS.md` | D1–D4 with question, gating finding, resolution, fallback |
+| `SOURCES.md` | 53 sources with DOI, discovery tool, and extracted numbers; §H split into an in-scope screening lane and a retained out-of-scope optimisation lane |
+| `PROPERTIES.md` | Property provenance map (all five correlations, an Objective-1 deliverable) and the viscosity defence |
+| `DECISIONS.md` | D1–D5 with question, gating finding, resolution, fallback; D5 records the removal of MOO from scope |
 | `PROGRESS_LOG.md` | Dated, append-only session log (~40 kB) |
 | `reference/prior_project/README.md` | Why the prior project's files cannot be used directly, and what was harvested from them |
 
@@ -1669,14 +1807,30 @@ load-bearing ones for the thesis:
 | 4 | The A–F case matrix as η deviation and RMS h error | dual-axis bar | §5.6 |
 | 5 | f_implied vs assumed η_rc, both designs, with stated values marked | line | §5.6 robustness table |
 | 6 | Recuperator effectiveness sweep: η and UA_tot vs ε | dual-axis line | §5.8 |
-| 7 | **Component exergy-destruction waterfall / Pareto bar** | bar | §6.3 |
+| 7 | **Component exergy-destruction waterfall (ranked bar)** | bar | §6.3 |
 | 8 | Per-node exergy profile along the cycle path | line | §6.2 |
 | 9 | cp and k enhancement vs loading: Han points, linear fit, cubic sensitivity, Maxwell floor | scatter + lines | §4.5, §4.6 |
-| 10 | Property surfaces ρ, cp, k, μ vs T with uncertainty bands, 0 / 0.7 / 2.0 wt% | 4-panel | §4.9 |
+| 10 | Property surfaces ρ, cp, k, **α**, μ vs T with uncertainty bands, 0 / 0.7 / 2.0 wt% | **5-panel** | §4.9, `results/htf_properties_*.csv` |
+| 10a | Thermal-diffusivity round-trip: derived vs Han-measured enhancement, with the density-convention offset annotated | grouped bar | `results/htf_properties_*.md` §3 |
 | 11 | **W_pump vs loop ΔT with the fitted exponent and the infeasibility boundary** | log-log | §7.4 |
 | 12 | Annual energy and pump power vs loading — the interior optimum | dual bar | §7.5 |
 | 13 | The UDPC table-shape reconciliation (13-col per-axis → 7-col combined) | schematic | §9.1 |
 | 14 | Convergence experiment matrix as a status grid | table/heat | §9.3 |
+
+**Figures the revised objectives require, once the campaign runs** — listed now so the sweep is
+designed to produce them rather than retrofitted to them:
+
+| # | Item | Type | Objective |
+|---|---|---|---|
+| 15 | **Morris µ\* vs σ** for the ten decision variables, with the negligible/influential/interacting regions marked | scatter | Obj 3 |
+| 16 | **Performance response surfaces** — each metric (η, η_ex, W_pump, ρ_TES, LCOE, Ė_D) over the two most influential axes | contour / 3-D grid | Obj 3 |
+| 17 | **Benefit envelope** — nano minus base salt as a continuous function of φ and the dominant cycle parameter, with the sign-change contour drawn | filled contour | **Obj 4** |
+| 18 | **Climate robustness** — the same surface at Ouarzazate and Upington, plus their difference | paired contour + Δ | **Obj 5** |
+| 19 | Feasible-region map: the infeasible corner (`system_capacity ≤ 0`, T_cold < 450 °C) shaded on the swept plane | overlay | Obj 3 |
+
+Figure 17 is the thesis's headline result under the revised objectives, and figure 19 is the one
+that makes the others honest — a response surface that hides where the design stops being physical
+overstates its own domain.
 
 ---
 
@@ -1693,22 +1847,43 @@ load-bearing ones for the thesis:
    **+0.428 %**, so **screening may use the cheap 3-point map** while a final reported figure uses
    the densest affordable map and carries ±0.43 % as resolution uncertainty (§9.5e). Not a
    convergence claim — SAM's default is 20 points per axis.
-3. **Partition the decision vector by build cost before designing the Morris experiment.** This
-   now sets the shape of the whole optimisation. SM and t_TES (#1, #2) do not touch the power
+3. ⚠ **Close the two representation gaps the revised objectives opened.** Both are cheap, and every
+   step below inherits them.
+   - ✅ **Thermal diffusivity** — done 2026-08-15; α is a module output, round-trip verified.
+   - ⚠️ **`d_p`** — pick option (a)/(b)/(c) of §11 and record it in `DECISIONS.md`. **Do not run a
+     particle-size sweep before this**: a size-blind model returns a flat surface that reads as a
+     physical finding and is not one.
+   - ⚠️ **Southern Africa (Upington) TMY** — re-download. Objective 5 cannot start without it, and
+     doing it *before* the sweep grid is designed lets the climate replication reuse the campaign
+     rather than repeat it.
+4. **Partition the decision vector by build cost before designing the Morris experiment.** This
+   now sets the shape of the whole sweep campaign. SM and t_TES (#1, #2) do not touch the power
    block — they need only a tower run (~20–40 s) against an existing map. The six cycle variables
    (φ, T_HTF, T_t,in, P_H, PR, f_RC) force a **~35 min** rebuild each. **Cache maps per
    cycle-design and partition on that line**, or a naive (10+1)×r design implies tens of hours of
    map generation alone. Note φ enters through the HTF property table, so it changes the PHX and
-   therefore *does* require a rebuild despite being a fluid variable.
-4. **Wire the decision vector** — expose all ten variables with the validated ranges of §11,
+   therefore *does* require a rebuild despite being a fluid variable. **Budget roughly double**:
+   Objective 4 needs a φ = 0 base-salt twin at every point, and Objective 5 repeats the envelope at
+   a second site.
+5. **Wire the decision vector** — expose all ten variables with the validated ranges of §11,
    including the hard constraints (φ ≤ 2.0 wt%, T_cold ≥ 450 °C, T_hot ≤ 700 °C,
    `system_capacity > 0`). Add the constraint this session produced: the integrated design runs at
    a **166.7 K loop ΔT** and spends ≈43 % of gross on receiver pumping (§9.5b), so ΔT is an active
-   objective-shaping variable, not a passive outcome.
-5. **Run the Morris screening** — the guaranteed deliverable, now unblocked. Budget it against
-   step 3's partition rather than against a flat per-evaluation cost.
+   response-shaping variable, not a passive outcome. **Ranges now matter more than they did**: a
+   sweep reports across its whole declared range, so each bound needs a stated basis rather than a
+   plausible guess.
 6. **Extend the exergy layer to the integrated model**, adding receiver, TES and tank Ė_D terms.
-7. **NSGA-II** over the pruned decision vector (stretch).
+   ⬆ **Moved ahead of the campaign, not after it** — Ė_D is one of the metrics mapped over the
+   envelope, so wiring it afterwards means re-running every point.
+7. **Run the Morris screening** (Obj 3, first half) — now unblocked. Budget it against step 4's
+   partition rather than a flat per-evaluation cost. Report **µ\* and σ** (`SOURCES.md` HS2), not µ.
+8. **Run the parametric sweep campaign** (Obj 3 second half + Obj 4) — φ, d_p and the cycle
+   parameters across their full feasible ranges, each point paired with its φ = 0 control. **This
+   is now the terminal deliverable and the project's largest compute commitment.**
+9. **Build the benefit envelope** (Obj 4) — nano minus base over the swept envelope, reported as a
+   continuous function of the varied parameters.
+10. **Replicate across climates** (Obj 5) — Ouarzazate and Upington; report whether the surface
+    shapes and the benefit's sign and magnitude survive the climate change.
 
 **Deferred validation hardening** — defensive depth for the viva, not modelling risk, with the
 restart trigger *"after Morris screening is delivered"*:
@@ -1723,11 +1898,23 @@ restart trigger *"after Morris screening is delivered"*:
 4. **SAM GUI cross-check** — lowest priority; tests packaging, not physics.
 
 **Property-model extensions:** dedicated MD (Green–Kubo or NEMD) on CuO/A1 for viscosity, validated
-first against Han's measured cp and k; a size-resolved enhancement anchor to bring d_p into the
-decision vector; denser cp loadings (≥ 4) to justify committing to a smooth fit.
+first against Han's measured cp and k; **a size-resolved enhancement anchor to bring d_p into the
+decision vector — no longer "future work" but a prerequisite of Objective 3** (item 3 above);
+denser cp loadings (≥ 4) to justify committing to a smooth fit.
 
-**Scope completion:** LCOE assessment to address `min LCOE`; the Southern Africa (Upington) TMY
-re-download for the Objective-5 climate-robustness study.
+**Scope completion:** LCOE assessment, now a reported metric of the envelope rather than an
+optimisation objective; the Southern Africa (Upington) TMY re-download, now blocking rather than
+deferred.
+
+**Genuinely beyond this thesis** *(the post-graduate lane the supervisor's 2026-08-15 rescope
+created, `DECISIONS.md` D5)*: **multi-objective optimisation** — NSGA-II/III over the screened
+decision vector, with a TOPSIS/CRITIC decision layer on the resulting front. Everything it needs
+already exists here and is the strongest argument for the handover: a validated model, computable
+objective functionals (η, Ė_D, W_pump, ρ_TES, LCOE), a screening result to prune the vector, the
+declared feasible ranges and hard constraints of §11, and the method literature retained in
+`SOURCES.md` §H-M for exactly this purpose. A response surface is also a far better starting point
+for an optimiser than a cold search: it shows where the interesting region is before any generation
+is evaluated.
 
 ---
 
