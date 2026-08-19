@@ -198,8 +198,12 @@ def build_case(name):
         return m, info
 
     n_points = int(name.split("_n")[1])
-    path = map_path(n_points)
-    rows_map = load_map(path)
+    # Resolve through the cache, keyed by a hash of the exported cycle design (map_cache.py).
+    # It NEVER builds here: spawn() gives each case 900 s, and a 38-min build inside that would
+    # be killed and reported as a crash -- the exact "timeout mistaken for failure" mistake
+    # CLAUDE.md §4.15 cost a session. A miss raises with the explicit build command.
+    import map_cache
+    rows_map, map_key, map_source = map_cache.resolve(PHI, T_hot, n_points, verbose=False)
 
     m.PowerCycle.pc_config = 1                              # user-defined cycle
     m.UserDefinedPowerCycle.ud_ind_od = rows_map
@@ -217,7 +221,9 @@ def build_case(name):
             worst = max(worst, abs(x - y) / denom)
 
     info["power_block"] = "sCO2 recompression (UDPC, n=%d)" % n_points
-    info["map"] = os.path.relpath(path, REPO_ROOT).replace("\\", "/")
+    info["map"] = "cache:%s" % map_key
+    info["map_key"] = map_key
+    info["map_source"] = map_source
     info["map_rows"] = len(rows_map)
     info["map_roundtrip_rel"] = worst
     info["design_eff_used"] = mag["design_eff"]
@@ -337,7 +343,7 @@ FIELDS = ("case", "status", "power_block", "map", "map_rows", "map_roundtrip_rel
           "ex_eta_II_cycle", "ex_Ed_total_kW", "ex_Ex_in_salt_kW", "ex_W_net_kW",
           "ex_largest_destroyer", "ex_largest_share_pct", "ex_balance_residual_rel",
           "ex_balance_closes", "ex_all_components_positive", "ex_cp_htf_kJ_kgK",
-          "ex_Ed_breakdown", "ex_tier1_note",
+          "ex_Ed_breakdown", "ex_tier1_note", "map_key", "map_source",
           "Ex_solar_MWh", "Ex_htf_to_cycle_MWh", "W_gross_MWh", "E_net_MWh",
           "Ed_power_block_MWh", "Ed_upstream_MWh", "eta_II_plant", "eta_II_power_block",
           "eta_II_collection", "petela_mean", "operating_hours", "negative_Ed_hours",
@@ -397,6 +403,7 @@ def main():
         if res.get("map"):
             say("        map             %s (%d rows, roundtrip %.3e)"
                 % (res["map"], res["map_rows"], res["map_roundtrip_rel"]))
+            say("        map source      %s" % res.get("map_source", "?"))
             say("        cooling         ud_f_W_dot_cool_des %.4f %%" % res["f_cool_pct"])
         say("        annual_energy   %s kWh" % fmt(res.get("annual_energy_kWh")))
         say("        nameplate (net) %s kW" % fmt(res.get("system_capacity_kW"), ",.1f"))

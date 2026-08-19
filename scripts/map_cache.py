@@ -267,6 +267,83 @@ def load_or_build(phi_mass, T_htf_hot_C, n_points, force=False, verbose=True):
 # =============================================================================
 # Audit
 # =============================================================================
+def import_legacy(csv_path, phi_mass, T_htf_hot_C, n_points, verbose=True):
+    """Adopt an existing `maps/*.csv` under the key the design assembled TODAY produces.
+
+    ⚠ THIS IS A MIGRATION, NOT A BUILD, AND THE SIDECAR SAYS SO. The file was produced at some
+    earlier commit; this function cannot prove the design that produced it matches the design
+    being keyed now. It records `source: legacy-import` plus the file's mtime so an audit can
+    tell adopted entries from built ones, and so a suspicious result can be traced to an
+    unverified adoption rather than to the physics.
+
+    The honest check, if one is ever needed, is a rebuild-and-compare: `--build --force` and diff
+    against the adopted rows. That costs 38 minutes and is worth it before a final reported
+    number, not before a screening run.
+    """
+    import build_udpc_map as bum
+
+    m = bum.build(phi_mass, T_htf_hot_C, n_points)
+    key, payload = design_key(m)
+    rows = []
+    with open(csv_path, newline="", encoding="utf-8") as fh:
+        for i, rec in enumerate(csv.reader(fh)):
+            if i == 0:
+                continue
+            rows.append([float(v) for v in rec])
+    if not rows or {len(r) for r in rows} != {7} or len(rows) % 3 != 0:
+        raise ValueError("%s is not a valid 7-column combined table" % csv_path)
+    write_cached(key, rows, payload, {
+        "source": "legacy-import",
+        "imported_from": os.path.relpath(csv_path, REPO_ROOT).replace("\\", "/"),
+        "source_mtime_utc": datetime.datetime.fromtimestamp(
+            os.path.getmtime(csv_path), datetime.timezone.utc).isoformat(),
+        "phi_mass": phi_mass, "T_htf_hot_C": T_htf_hot_C, "n_points": n_points,
+        "legacy_tag": ("phi%.4f_n%d" % (phi_mass, n_points)).replace(".", "p"),
+        "verified_by_rebuild": False,
+    })
+    if verbose:
+        print("[map_cache] imported %s -> %s (UNVERIFIED adoption)"
+              % (os.path.relpath(csv_path, REPO_ROOT), key))
+    return key
+
+
+def resolve(phi_mass, T_htf_hot_C, n_points, allow_legacy=True, verbose=True):
+    """Get a map WITHOUT ever building one. Returns (rows, key, source).
+
+    ⚠ THIS NEVER BUILDS, AND THAT IS DELIBERATE. `run_integrated_annual.spawn()` runs each case
+    in a subprocess with a 900 s timeout; a 38-minute build inside one would be killed and
+    reported as a crash, which is precisely the "timeout mistaken for failure" mistake
+    `CLAUDE.md` §4.15 cost this project a session over. Building is an explicit, separate step:
+    `map_cache.py --build`.
+
+    Order: cache, then the legacy `maps/*.csv` (adopted on the spot, flagged unverified), then a
+    clear error naming the command to run.
+    """
+    import build_udpc_map as bum
+
+    m = bum.build(phi_mass, T_htf_hot_C, n_points)
+    key, _ = design_key(m)
+    rows, meta = read_cached(key)
+    if rows is not None:
+        return rows, key, ("cache-hit" if meta.get("source") != "legacy-import"
+                           else "cache-hit(legacy-import, unverified)")
+
+    if allow_legacy:
+        tag = ("phi%.4f_n%d" % (phi_mass, n_points)).replace(".", "p")
+        legacy = os.path.join(REPO_ROOT, "maps", "sco2_udpc_%s_tower7.csv" % tag)
+        if os.path.exists(legacy):
+            import_legacy(legacy, phi_mass, T_htf_hot_C, n_points, verbose=verbose)
+            rows, _ = read_cached(key)
+            if rows is not None:
+                return rows, key, "legacy-import(unverified)"
+
+    raise FileNotFoundError(
+        "no map for this cycle design (key %s). Build it explicitly -- it takes ~38 min and "
+        "must NOT run inside a case subprocess:\n"
+        "    .\\.venv\\Scripts\\python.exe -u .\\scripts\\map_cache.py --build "
+        "--phi %g --T-htf-hot %g --n-points %d" % (key, phi_mass, T_htf_hot_C, n_points))
+
+
 def audit(verbose=True):
     """Every cached entry with the design it came from. Returns a list of dicts."""
     entries = []
@@ -283,10 +360,16 @@ def audit(verbose=True):
         if not entries:
             print("[map_cache] cache is empty (%s)" % os.path.relpath(CACHE_DIR, REPO_ROOT))
         for e in entries:
-            print("  %s  phi=%.4f n=%d T_hot=%.0f  eta=%.5f  %ss  %s  %s"
+            # `source` is the column to read first: an adopted map has never been rebuilt
+            # under this key, so a surprising result traced to one is a provenance question
+            # before it is a physics question.
+            src = e.get("source", "built")
+            eta = e.get("eta_thermal_calc")
+            print("  %s  phi=%.4f n=%d T_hot=%.0f  eta=%s  %-22s %s  %s"
                   % (e["key"], e.get("phi_mass", float("nan")), e.get("n_points", -1),
-                     e.get("T_htf_hot_C", float("nan")), e.get("eta_thermal_calc", float("nan")),
-                     e.get("build_seconds", "?"), e.get("git_commit", "?"),
+                     e.get("T_htf_hot_C", float("nan")),
+                     ("%.5f" % eta) if isinstance(eta, float) else "n/a (not built here)",
+                     src, e.get("git_commit", "?"),
                      "OK" if e["usable"] else "UNUSABLE"))
     return entries
 

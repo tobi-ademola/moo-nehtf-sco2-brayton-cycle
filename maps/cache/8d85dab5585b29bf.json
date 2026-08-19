@@ -1,0 +1,150 @@
+{
+  "T_htf_hot_C": 700.0,
+  "git_commit": "b313c6d-dirty",
+  "imported_from": "maps/sco2_udpc_phi0p0070_n5_tower7.csv",
+  "key": "8d85dab5585b29bf",
+  "legacy_tag": "phi0p0070_n5",
+  "n_points": 5,
+  "n_rows": 45,
+  "payload": {
+    "inputs": {
+      "AirCoolerDesign": {
+        "N_nodes_air_cooler_pass": 10.0,
+        "deltaP_cooler_frac": 0.00163791234963,
+        "eta_air_cooler_fan": 0.5,
+        "fan_power_frac": 0.01,
+        "is_design_air_cooler": 1.0
+      },
+      "Common": {
+        "PHX_co2_deltaP_des_in": 0.00651806808473,
+        "P_high_limit": 20.0,
+        "T_amb_high": 45.0,
+        "T_amb_low": 5.0,
+        "T_htf_hot_high": 710.0,
+        "T_htf_hot_low": 620.0,
+        "deltaP_counterHX_frac": 0.0,
+        "eta_isen_mc": 0.89,
+        "eta_isen_pc": 0.89,
+        "eta_isen_rc": 0.89,
+        "eta_isen_t": 0.9,
+        "is_apply_default_htf_mins": 1.0,
+        "is_generate_udpc": 1.0,
+        "m_dot_htf_ND_high": 1.05,
+        "m_dot_htf_ND_low": 0.5,
+        "mc_comp_type": 1.0,
+        "n_T_amb": 5.0,
+        "n_T_htf_hot": 5.0,
+        "n_m_dot_htf_ND": 5.0
+      },
+      "HeatExchangerDesign": {
+        "HTR_HP_deltaP_des_in": 0.00228411693318,
+        "HTR_LP_deltaP_des_in": 0.0159637391824,
+        "HTR_UA_des_in": 5000.0,
+        "HTR_design_code": 2.0,
+        "HTR_eff_des_in": 0.95,
+        "HTR_min_dT_des_in": 10.0,
+        "HTR_n_sub_hx": 20.0,
+        "HTR_od_model": 1.0,
+        "HT_recup_eff_max": 1.0,
+        "LTR_HP_deltaP_des_in": 0.000489,
+        "LTR_LP_deltaP_des_in": 0.0125226846298,
+        "LTR_UA_des_in": 5000.0,
+        "LTR_design_code": 2.0,
+        "LTR_eff_des_in": 0.95,
+        "LTR_min_dT_des_in": 10.0,
+        "LTR_n_sub_hx": 20.0,
+        "LTR_od_model": 1.0,
+        "LT_recup_eff_max": 1.0,
+        "UA_recup_tot_des": 10000.0,
+        "cycle_config": 1.0,
+        "des_objective": 0.0,
+        "is_IP_fixed": 0.0,
+        "is_PR_fixed": 2.6,
+        "is_P_high_fixed": 1.0,
+        "is_recomp_ok": -0.4097,
+        "min_phx_deltaT": 0.0,
+        "rel_tol": 4.0
+      },
+      "PHXDesign": {
+        "PHX_n_sub_hx": 10.0,
+        "PHX_od_model": 1.0,
+        "dT_PHX_cold_approach": 20.0
+      },
+      "SystemDesign": {
+        "T_amb_des": 26.0,
+        "T_htf_hot_des": 700.0,
+        "W_dot_net_des": 115000.0,
+        "dT_PHX_hot_approach": 20.0,
+        "dT_mc_approach": 6.0,
+        "design_method": 3.0,
+        "eta_thermal_des": 0.5127,
+        "htf": 50.0,
+        "htf_props": [
+          [
+            450.0,
+            1.189507538,
+            1714.00706632,
+            0.00381022748022,
+            2.22299403257e-06,
+            0.621111690745,
+            58462.6168458
+          ],
+          [
+            500.0,
+            1.161880038,
+            1685.73768428,
+            0.00342125128923,
+            2.02952767868e-06,
+            0.603754743239,
+            117247.306246
+          ],
+          [
+            550.0,
+            1.134252538,
+            1657.46652852,
+            0.00311243564831,
+            1.87782715051e-06,
+            0.586397795734,
+            174650.620646
+          ],
+          [
+            600.0,
+            1.106625038,
+            1629.19359889,
+            0.00286233933078,
+            1.75690558368e-06,
+            0.569040848228,
+            230672.560046
+          ],
+          [
+            650.0,
+            1.078997538,
+            1600.91889521,
+            0.00265633368902,
+            1.65925562935e-06,
+            0.551683900722,
+            285313.124446
+          ],
+          [
+            700.0,
+            1.051370038,
+            1572.64241733,
+            0.00248414814303,
+            1.5796013866e-06,
+            0.534326953216,
+            338572.313846
+          ]
+        ],
+        "site_elevation": 0.0
+      }
+    },
+    "pysam": "7.1.1.post1",
+    "schema": 1,
+    "ssc": "ssc 306 / Windows 64 bit Visual C++ Apr 24 2026 01:21:21"
+  },
+  "phi_mass": 0.007,
+  "source": "legacy-import",
+  "source_mtime_utc": "2026-08-15T09:51:52.626852+00:00",
+  "verified_by_rebuild": false,
+  "written_utc": "2026-08-19T18:48:57.093871+00:00"
+}
