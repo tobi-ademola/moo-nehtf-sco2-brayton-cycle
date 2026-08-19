@@ -221,6 +221,13 @@ def annual_exergy(m, name):
     imply (CLAUDE.md §4.9 is the standing reason to check): q_sf_inc [MWt], m_dot_pc [kg/s],
     T_pc_in/out [C], P_cycle [MWe gross], gen [kW net], tdry [C].
 
+    PARAMETERISED BY `q_pb`, NOT BY `m_dot_pc`. The flow does not reconcile with the duty in
+    a thin tail of deep part-load hours -- a median -61 % WITHIN those hours, against +0.004 %
+    across all operating hours -- which produced 27 hours of negative Ed on the first run; `scripts/diagnose_negative_exergy_hours.py` established that q_pb and P_cycle are the
+    mutually consistent pair. m_dot_pc is still passed, purely so the disagreement stays
+    visible as `mdot_duty_median_dev_pct` instead of being forgotten once it stopped breaking
+    anything.
+
     THE DEAD STATE IS HOURLY. T0(t) = tdry(t), so both the Petela factor on the solar input and
     the HTF stream exergy move through the year. Objective 5 compares a MENA and a Southern-
     African site; a frozen T0 would bury the difference that comparison exists to measure.
@@ -237,7 +244,8 @@ def annual_exergy(m, name):
     try:
         return exergy.annual_plant_exergy(
             q_sf_inc_MW=list(o.q_sf_inc),
-            m_dot_pc_kg_s=list(o.m_dot_pc),
+            q_pb_MW=list(o.q_pb),
+            m_dot_pc_kg_s=list(o.m_dot_pc),      # diagnostic cross-check only, never the answer
             T_pc_in_C=list(o.T_pc_in),
             T_pc_out_C=list(o.T_pc_out),
             P_cycle_MW=list(o.P_cycle),
@@ -323,7 +331,7 @@ FIELDS = ("case", "status", "power_block", "map", "map_rows", "map_roundtrip_rel
           "Ex_solar_MWh", "Ex_htf_to_cycle_MWh", "W_gross_MWh", "E_net_MWh",
           "Ed_power_block_MWh", "Ed_upstream_MWh", "eta_II_plant", "eta_II_power_block",
           "eta_II_collection", "petela_mean", "operating_hours", "negative_Ed_hours",
-          "parasitic_MWh", "ex_annual_error")
+          "parasitic_MWh", "mdot_duty_median_dev_pct", "ex_annual_error")
 
 
 def fmt(v, spec=",.0f"):

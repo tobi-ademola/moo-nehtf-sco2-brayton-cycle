@@ -127,6 +127,58 @@ def stream_exergy_rate(mdot: float, cp: float, T_hot_K: float, T_cold_K: float,
     return mdot * cp * ((T_hot_K - T_cold_K) - T0_K * math.log(T_hot_K / T_cold_K))
 
 
+def carnot_lm_factor(T_hot_K: float, T_cold_K: float, T0_K: float) -> float:
+    """Availability fraction of heat delivered by a stream cooling T_hot -> T_cold.
+
+        f = 1 - T0 * ln(T_hot/T_cold) / (T_hot - T_cold)
+
+    i.e. the Carnot factor evaluated at the stream's LOG-MEAN temperature. Multiply a duty by
+    this to get its exergy. Reduces to the isothermal Carnot factor as T_hot -> T_cold.
+
+    ⚠ COMPUTED WITH log1p, NOT log(T_hot/T_cold). The naive form catastrophically cancels for
+    a small temperature drop: ln(T_hot/T_cold) and (T_hot - T_cold) both go to zero, and in
+    float64 the ratio becomes noise long before the difference underflows. An earlier version
+    guarded with `abs(dT) < 1e-12` and still returned garbage at dT = 1e-9 K -- caught by the
+    continuity assertion in validate(), not by inspection. log1p is accurate to full precision
+    for small arguments, so the expression is smooth all the way down to dT = 0. This matters
+    in practice: near-isothermal hours are exactly what deep part-load and TES-hold produce.
+    """
+    if T_hot_K <= 0 or T_cold_K <= 0:
+        raise ValueError("stream temperatures must be absolute (K) and positive")
+    dT = T_hot_K - T_cold_K
+    if dT == 0.0:
+        return 1.0 - T0_K / T_hot_K
+    # ln(T_hot/T_cold) = log1p(dT/T_cold); dividing by dT keeps the quotient well-conditioned.
+    return 1.0 - T0_K * math.log1p(dT / T_cold_K) / dT
+
+
+def heat_stream_exergy_rate(q_dot: float, T_hot_K: float, T_cold_K: float,
+                            T0_K: float) -> float:
+    """Exergy of a stream duty -- SAME physics as `stream_exergy_rate`, different parameters.
+
+        Ex = q_dot * [ 1 - T0 * ln(T_hot/T_cold) / (T_hot - T_cold) ]
+
+    Algebraically IDENTICAL to the mass-flow form whenever q_dot = mdot*cp*(T_hot - T_cold);
+    `validate()` asserts that equivalence. Units follow q_dot.
+
+    *** WHY THE ANNUAL LAYER USES THIS ONE AND THE DESIGN LAYER DOES NOT ***
+    Measured 2026-08-19 (`scripts/diagnose_negative_exergy_hours.py`, artifact
+    `results/negative_exergy_hours_*`): in deep part-load hours the tower's `m_dot_pc` does NOT
+    reconcile with the `q_pb` reported for the same hour -- the flow-derived duty came out a
+    median 61 % LOW *within those hours*, driving 27 of 6040 operating hours to a negative Ed, a second-law
+    violation. In those same hours `q_pb` and `P_cycle` are mutually consistent (their ratio is
+    the reported hourly efficiency), so the duty is the trustworthy term and the mass flow is
+    not. At the DESIGN point the two agree exactly (1240 kg/s x 1.0966 kJ/kgK x 166.7 K =
+    226.7 MW = peak q_pb), which is why the discrepancy is invisible to any design-point check.
+
+    Tier 1 keeps the mass-flow form deliberately: there the flow is derived from the turbine
+    duty and cross-asserted (`co2_mass_flow`), and the cycle-wide balance closes to 1.5e-04 on
+    it. This is not an inconsistency between the tiers -- each uses the quantity that is
+    trustworthy in its own lane, and both are the same equation.
+    """
+    return q_dot * carnot_lm_factor(T_hot_K, T_cold_K, T0_K)
+
+
 # =============================================================================
 # Tier 1 -- design-point cycle exergy
 # =============================================================================
@@ -242,8 +294,9 @@ def design_cycle_exergy(o, h, s, T_amb_K: float, T_htf_hot_C: float,
 # =============================================================================
 # Tier 2 -- annual plant exergy
 # =============================================================================
-def annual_plant_exergy(*, q_sf_inc_MW, m_dot_pc_kg_s, T_pc_in_C, T_pc_out_C,
-                        P_cycle_MW, gen_kW, tdry_C, phi_mass, cp_fallback_kJ_kgK=None) -> dict:
+def annual_plant_exergy(*, q_sf_inc_MW, q_pb_MW, T_pc_in_C, T_pc_out_C,
+                        P_cycle_MW, gen_kW, tdry_C, phi_mass,
+                        m_dot_pc_kg_s=None, cp_fallback_kJ_kgK=None) -> dict:
     """Plant-level exergy accounting over 8760 h, with an HOURLY dead state.
 
     Every array is an 8760-length hourly series straight off `TcsmoltenSalt.Outputs`. Units are
@@ -255,18 +308,40 @@ def annual_plant_exergy(*, q_sf_inc_MW, m_dot_pc_kg_s, T_pc_in_C, T_pc_out_C,
     very effect that comparison is asking about, and would also misstate the solar exergy, since
     the Petela factor depends on T0.
 
+    *** PARAMETERISED BY DUTY (`q_pb`), NOT BY MASS FLOW -- and that is a measured choice. ***
+    The first version integrated m_dot_pc*cp*dT and produced 27 hours of NEGATIVE Ed, a
+    second-law violation. `scripts/diagnose_negative_exergy_hours.py` established that in those
+    hours `q_pb` and `P_cycle` are mutually consistent while `m_dot_pc` under-reports the duty
+    by a median 61 %, so the flow is the untrustworthy term. See `heat_stream_exergy_rate` for
+    the full account. Both forms are the same equation; this one rests on the reliable input.
+
+    ⚠ BE PRECISE ABOUT THE SCOPE OF THAT 61 %. It is the median *among the offending hours*.
+    Across ALL operating hours the two agree to a median +0.004 % (`mdot_duty_median_dev_pct`,
+    measured 2026-08-19), so `m_dot_pc` is NOT broadly wrong -- it diverges in a thin part-load
+    tail. The re-parameterisation is therefore a robustness fix against a tail, not a correction
+    of a systematically bad output: it moved annual power-block Ed by ~0.05 %.
+
+    `m_dot_pc_kg_s` is now OPTIONAL and purely diagnostic: pass it and the returned dict carries
+    `mdot_duty_median_dev_pct`, the median disagreement between the flow-derived duty and
+    `q_pb`. It never enters the answer. Keeping it visible means a future PySAM that fixes the
+    part-load flow shows up as this number going to zero, rather than the discrepancy being
+    silently forgotten once it stopped breaking anything.
+
     HTF cp comes from `scripts/nanofluid_properties.py` at the hour's mean HTF temperature, so
-    the exergy layer and the Objective 1 property model cannot drift apart. Pass
-    `cp_fallback_kJ_kgK` only to bypass the property module (e.g. a nitrate control case).
+    the exergy layer and the Objective 1 property model cannot drift apart. It is used ONLY for
+    that cross-check now; pass `cp_fallback_kJ_kgK` to bypass the property module (e.g. a
+    nitrate control case).
 
     WHAT IS LUMPED AND WHY. `Ed_power_block` is Ex_htf - W_gross for the hour: exact, and needing
     no state points. It is NOT split by component -- the UDPC path carries no per-hour h or s, so
     a component split does not exist off-design. See the module docstring.
     """
     n = len(q_sf_inc_MW)
-    for name, arr in (("m_dot_pc", m_dot_pc_kg_s), ("T_pc_in", T_pc_in_C),
-                      ("T_pc_out", T_pc_out_C), ("P_cycle", P_cycle_MW),
-                      ("gen", gen_kW), ("tdry", tdry_C)):
+    checks = [("q_pb", q_pb_MW), ("T_pc_in", T_pc_in_C), ("T_pc_out", T_pc_out_C),
+              ("P_cycle", P_cycle_MW), ("gen", gen_kW), ("tdry", tdry_C)]
+    if m_dot_pc_kg_s is not None:
+        checks.append(("m_dot_pc", m_dot_pc_kg_s))
+    for name, arr in checks:
         if len(arr) != n:
             raise ValueError("hourly array '%s' has length %d, expected %d" % (name, len(arr), n))
 
@@ -290,6 +365,7 @@ def annual_plant_exergy(*, q_sf_inc_MW, m_dot_pc_kg_s, T_pc_in_C, T_pc_out_C,
     operating_hours = 0
     psi_sum = 0.0
     psi_hours = 0
+    mdot_dev_pct = []
 
     for i in range(n):
         T0_K = tdry_C[i] + 273.15
@@ -300,22 +376,26 @@ def annual_plant_exergy(*, q_sf_inc_MW, m_dot_pc_kg_s, T_pc_in_C, T_pc_out_C,
             psi_sum += psi
             psi_hours += 1
 
-        mdot = m_dot_pc_kg_s[i]
-        if mdot <= 0.0:
+        q_duty = q_pb_MW[i]
+        if q_duty <= 0.0:
             continue
         T_hot_K = T_pc_in_C[i] + 273.15
         T_cold_K = T_pc_out_C[i] + 273.15
         if T_hot_K <= T_cold_K:
             continue                              # no usable temperature drop this hour
         operating_hours += 1
-        cp = cp_kJ_kgK(0.5 * (T_pc_in_C[i] + T_pc_out_C[i]))
-        ex_htf_MW = stream_exergy_rate(mdot, cp, T_hot_K, T_cold_K, T0_K) / 1000.0
+        ex_htf_MW = heat_stream_exergy_rate(q_duty, T_hot_K, T_cold_K, T0_K)
         ex_htf_MWh += ex_htf_MW
         w_gross_MWh += P_cycle_MW[i]
         ed = ex_htf_MW - P_cycle_MW[i]
         if ed < 0.0:
             negative_ed_hours += 1
         ed_pb_MWh += ed
+
+        if m_dot_pc_kg_s is not None and m_dot_pc_kg_s[i] > 0.0:
+            cp = cp_kJ_kgK(0.5 * (T_pc_in_C[i] + T_pc_out_C[i]))
+            q_flow = m_dot_pc_kg_s[i] * cp * (T_pc_in_C[i] - T_pc_out_C[i]) / 1000.0
+            mdot_dev_pct.append(100.0 * (q_flow - q_duty) / q_duty)
 
     gen_MWh = sum(gen_kW) / 1000.0
     return {
@@ -332,6 +412,10 @@ def annual_plant_exergy(*, q_sf_inc_MW, m_dot_pc_kg_s, T_pc_in_C, T_pc_out_C,
         "operating_hours": operating_hours,
         "negative_Ed_hours": negative_ed_hours,
         "parasitic_MWh": w_gross_MWh - gen_MWh,
+        # Diagnostic only -- never enters the answer. See the docstring: this is the median
+        # disagreement between the flow-derived duty and q_pb, which was -61 % on 2026-08-19.
+        "mdot_duty_median_dev_pct": (sorted(mdot_dev_pct)[len(mdot_dev_pct) // 2]
+                                     if mdot_dev_pct else None),
     }
 
 
@@ -370,6 +454,25 @@ def validate(verbose: bool = True) -> bool:
     # Hotter dead state -> less available work from the same stream.
     e3 = stream_exergy_rate(2.0, 1.1, 900.0, 800.0, 320.0)
     report("stream exergy falls as T0 rises", e3 < e1, "(%.3f < %.3f)" % (e3, e1))
+
+    # 2b. The two stream forms must be THE SAME EQUATION. This is the load-bearing test for
+    #     the 2026-08-19 re-parameterisation: if they ever disagree, the annual layer and the
+    #     design layer are computing different physics and the tiers cannot be compared.
+    mdot_t, cp_t, Th, Tc, T0 = 3.7, 1.13, 950.0, 780.0, 301.0
+    q_t = mdot_t * cp_t * (Th - Tc)
+    e_flow = stream_exergy_rate(mdot_t, cp_t, Th, Tc, T0)
+    e_duty = heat_stream_exergy_rate(q_t, Th, Tc, T0)
+    report("duty form == mass-flow form", abs(e_flow - e_duty) < 1e-9,
+           "(%.6f vs %.6f)" % (e_flow, e_duty))
+    # The availability fraction must sit strictly inside (0, 1) for a real stream above T0,
+    # and must collapse to the isothermal Carnot factor as the stream becomes isothermal.
+    fr = carnot_lm_factor(Th, Tc, T0)
+    report("0 < carnot_lm < 1", 0.0 < fr < 1.0, "(%.5f)" % fr)
+    report("carnot_lm -> Carnot as dT -> 0",
+           abs(carnot_lm_factor(900.0, 900.0, T0) - (1.0 - T0 / 900.0)) < 1e-12)
+    report("carnot_lm continuous at dT -> 0",
+           abs(carnot_lm_factor(900.0 + 1e-9, 900.0, T0)
+               - carnot_lm_factor(900.0, 900.0, T0)) < 1e-6)
 
     # 3. Node exergy: zero at the reference by construction, and unaffected in DIFFERENCES by
     #    the choice of reference node -- the property the module docstring claims.
