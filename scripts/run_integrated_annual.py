@@ -101,13 +101,17 @@ def design_magnitudes():
     appears to work.
     """
     import build_udpc_map as bum
+    import validate_dostal as vd
+    import exergy
+
     m = bum.build(PHI, bum.T_HTF_HOT_DES_C, 3)
     m.Common.is_generate_udpc = 0             # design only; the sweep is ~35 min and not needed
     m.execute(0)
     d = bum.check_design(m)
     if d["problems"]:
         raise RuntimeError("design point is not a valid recompression cycle: %s" % d["problems"])
-    return {
+
+    out = {
         "design_eff": d["eta_thermal_calc"],
         "T_htf_hot_C": bum.T_HTF_HOT_DES_C,
         "T_htf_cold_C": d["T_htf_cold_des_C"],
@@ -115,6 +119,38 @@ def design_magnitudes():
         "f_cool_pct": bum.cooling_fraction_pct(d, bum.W_DOT_NET_DES_KWE),
         "W_dot_cooler_fan_kWe": d["W_dot_cooler_fan_kWe"],
     }
+
+    # -- TIER 1 exergy: free, because this solve already happened --------------
+    # `m` stays referenced for the whole function; never hand a bare Outputs to a caller
+    # (CLAUDE.md §4.8). The hot temperature is passed EXPLICITLY: exergy.entropy_generation
+    # will not derive it, precisely so this lane's 700 C cannot silently pick up the Dostal
+    # lane's 720 C (see that function's docstring).
+    o = m.Outputs
+    h = list(o.h_state_points)
+    s = list(o.s_state_points)
+    T_amb_K = 273.15 + (vd.T_MC_IN_C - vd.DT_MC_APPROACH)
+    ex = exergy.design_cycle_exergy(o, h, s, T_amb_K=T_amb_K,
+                                    T_htf_hot_C=bum.T_HTF_HOT_DES_C)
+
+    # Flatten to scalars. `spawn()` round-trips every result through JSON, so nested dicts of
+    # per-component values would not survive the subprocess boundary -- they are emitted as
+    # one "COMPONENT=share" string plus the named leaders.
+    out.update({
+        "ex_eta_II_cycle": ex["eta_II"],
+        "ex_Ed_total_kW": ex["Ed_total_kW"],
+        "ex_Ex_in_salt_kW": ex["Ex_in_salt_kW"],
+        "ex_W_net_kW": ex["W_net_kW"],
+        "ex_largest_destroyer": ex["largest_destroyer"],
+        "ex_largest_share_pct": ex["largest_destroyer_share_pct"],
+        "ex_balance_residual_rel": ex["balance_residual_rel"],
+        "ex_balance_closes": bool(ex["balance_closes"]),
+        "ex_all_components_positive": bool(ex["all_components_positive"]),
+        "ex_cp_htf_kJ_kgK": ex["cp_htf_kJ_kgK"],
+        "ex_Ed_breakdown": "; ".join(
+            "%s=%.1f kW (%.1f%%)" % (k.split()[0], ex["Ed_kW"][k], ex["Ed_share_pct"][k])
+            for k in sorted(ex["Ed_kW"], key=lambda k: -ex["Ed_kW"][k])),
+    })
+    return out
 
 
 def build_case(name):
@@ -178,6 +214,41 @@ def build_case(name):
     return m, info
 
 
+def annual_exergy(m, name):
+    """TIER 2 exergy over the 8760 h just simulated. Returns JSON-safe scalars.
+
+    Units are the ones verified by execution on 2026-08-19, not the ones the output names
+    imply (CLAUDE.md §4.9 is the standing reason to check): q_sf_inc [MWt], m_dot_pc [kg/s],
+    T_pc_in/out [C], P_cycle [MWe gross], gen [kW net], tdry [C].
+
+    THE DEAD STATE IS HOURLY. T0(t) = tdry(t), so both the Petela factor on the solar input and
+    the HTF stream exergy move through the year. Objective 5 compares a MENA and a Southern-
+    African site; a frozen T0 would bury the difference that comparison exists to measure.
+
+    The steam control uses a cp fallback rather than the nano-HTF property module -- it runs the
+    same fluid here, so this is belt-and-braces, but the branch is explicit so a future nitrate
+    control cannot silently be costed with chloride properties.
+
+    Never raise out of here: a failed exergy accounting must not lose an otherwise-good annual
+    run. Failures are reported in the `ex_annual_error` field instead.
+    """
+    import exergy
+    o = m.Outputs
+    try:
+        return exergy.annual_plant_exergy(
+            q_sf_inc_MW=list(o.q_sf_inc),
+            m_dot_pc_kg_s=list(o.m_dot_pc),
+            T_pc_in_C=list(o.T_pc_in),
+            T_pc_out_C=list(o.T_pc_out),
+            P_cycle_MW=list(o.P_cycle),
+            gen_kW=list(o.gen),
+            tdry_C=list(o.tdry),
+            phi_mass=PHI,
+        )
+    except Exception as e:                      # noqa: BLE001 -- see docstring
+        return {"ex_annual_error": "%s: %s" % (type(e).__name__, e)}
+
+
 def run_case(name):
     """Execute one case in THIS process; the driver runs each in a child."""
     import htf_sam_bridge as hsb
@@ -192,6 +263,7 @@ def run_case(name):
     fin.execute(0)
 
     info.update(hsb.extract(m))
+    info.update(annual_exergy(m, name))
 
     cap = info.get("system_capacity_kW")
     if cap is not None and cap <= 0:
@@ -240,7 +312,18 @@ FIELDS = ("case", "status", "power_block", "map", "map_rows", "map_roundtrip_rel
           "design_eff_used", "T_htf_hot_C", "T_htf_cold_C", "loop_dT_K", "recomp_frac",
           "f_cool_pct", "annual_energy_kWh", "system_capacity_kW", "capacity_factor_pct",
           "annual_W_cycle_gross_kWh", "W_dot_rec_pump_des_MW", "q_dot_rec_des_MW", "A_sf_m2",
-          "lcoe_real_ct_kWh", "freeze_warning", "error")
+          "lcoe_real_ct_kWh", "freeze_warning", "error",
+          # Objective 2 exergy. TIER 1 (ex_*, design point) is per-COMPONENT; TIER 2
+          # (Ex_*/eta_II_*/Ed_*, annual) is plant-level and lumps the power block, because the
+          # UDPC map carries no per-hour state points (scripts/exergy.py docstring).
+          "ex_eta_II_cycle", "ex_Ed_total_kW", "ex_Ex_in_salt_kW", "ex_W_net_kW",
+          "ex_largest_destroyer", "ex_largest_share_pct", "ex_balance_residual_rel",
+          "ex_balance_closes", "ex_all_components_positive", "ex_cp_htf_kJ_kgK",
+          "ex_Ed_breakdown",
+          "Ex_solar_MWh", "Ex_htf_to_cycle_MWh", "W_gross_MWh", "E_net_MWh",
+          "Ed_power_block_MWh", "Ed_upstream_MWh", "eta_II_plant", "eta_II_power_block",
+          "eta_II_collection", "petela_mean", "operating_hours", "negative_Ed_hours",
+          "parasitic_MWh", "ex_annual_error")
 
 
 def fmt(v, spec=",.0f"):
@@ -343,6 +426,64 @@ def main():
             % d)
         say("   design_eff %.5f (sCO2) vs %.5f (steam)"
             % (a["design_eff_used"], s["design_eff_used"]))
+
+    # ---- exergy (Objective 2) ----
+    say("")
+    say("=" * 100)
+    say("EXERGY -- Objective 2, DECISIONS.md D1")
+    say("=" * 100)
+    say("TIER 1 -- DESIGN POINT, per component (from ssc's own h and s)")
+    for r in rows:
+        if r.get("ex_eta_II_cycle") is None:
+            continue
+        say("   %s" % r["case"])
+        say("      eta_II (cycle)     %.4f   = W_net %s kW / Ex_in(salt) %s kW"
+            % (r["ex_eta_II_cycle"], fmt(r["ex_W_net_kW"], ",.1f"),
+               fmt(r["ex_Ex_in_salt_kW"], ",.1f")))
+        say("      total Ed           %s kW" % fmt(r["ex_Ed_total_kW"], ",.1f"))
+        say("      largest destroyer  %s at %.1f %%"
+            % (r["ex_largest_destroyer"], r["ex_largest_share_pct"]))
+        say("      breakdown          %s" % r["ex_Ed_breakdown"])
+        say("      balance            residual %+.2e relative -> %s"
+            % (r["ex_balance_residual_rel"],
+               "CLOSES" if r["ex_balance_closes"] else "DOES NOT CLOSE -- investigate"))
+        say("      all Ed > 0         %s" % ("yes" if r["ex_all_components_positive"] else
+                                             "NO -- second-law violation"))
+    say("")
+    say("   The balance is the load-bearing check, not the per-component signs: it exercises")
+    say("   every h, every s, both mass flows and the salt properties at once, so it catches")
+    say("   scaling errors that sign checks cannot.")
+
+    say("")
+    say("TIER 2 -- ANNUAL, plant level, with an HOURLY dead state T0(t) = tdry(t)")
+    say("%-14s %13s %13s %11s %11s %11s %8s" % ("case", "Ex_solar MWh", "Ex_htf MWh",
+                                                "eta_II pl", "eta_II pb", "eta_II col",
+                                                "neg Ed h"))
+    say("-" * 100)
+    for r in rows:
+        if r.get("Ex_solar_MWh") is None:
+            continue
+        say("%-14s %13s %13s %11s %11s %11s %8s"
+            % (r["case"], fmt(r["Ex_solar_MWh"]), fmt(r["Ex_htf_to_cycle_MWh"]),
+               fmt(r["eta_II_plant"], ".4f"), fmt(r["eta_II_power_block"], ".4f"),
+               fmt(r["eta_II_collection"], ".4f"), fmt(r["negative_Ed_hours"], "d")))
+    bad = [r["case"] for r in rows if (r.get("negative_Ed_hours") or 0) > 0]
+    say("")
+    if bad:
+        say("   ⚠ NEGATIVE HOURLY Ed in: %s" % ", ".join(bad))
+        say("   Ed = Ex_htf - W_gross < 0 is a second-law violation in that hour. Either the")
+        say("   HTF cp, the temperatures or the gross work are inconsistent -- do NOT report")
+        say("   the annual eta_II until this is explained.")
+    else:
+        say("   Hourly Ed >= 0 in every operating hour of every case -- the annual accounting")
+        say("   is second-law consistent, which is what makes it safe to collect at every")
+        say("   swept point of the campaign.")
+    say("")
+    say("   ⚠ TIER 2 LUMPS THE POWER BLOCK, deliberately. The UDPC map carries normalised")
+    say("   response SHAPES only (CLAUDE.md §4.11), so there are no per-hour state points and")
+    say("   no per-component Ed at any hour but the design point. Ed_power_block is the exact")
+    say("   lumped quantity Ex_htf - W_gross. Do NOT infer an annual component ranking from")
+    say("   the tier-1 design-point one: off-design shifts it.")
 
     os.makedirs(RESULTS_DIR, exist_ok=True)
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
