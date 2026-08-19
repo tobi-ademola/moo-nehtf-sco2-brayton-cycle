@@ -61,6 +61,21 @@
       > ⚠ Verify the invariance claim rather than assuming it: confirm by execution that `d_p`
       > and the site genuinely do not touch any field `build()` assigns, before letting the cache
       > treat them as key-irrelevant.
+      >
+      > **✅ The mechanism exists — verified 2026-08-19.** `m.export()` on the assembled
+      > `Sco2CspUdPcTables` returns **64 assigned input fields** across `SystemDesign` (10),
+      > `HeatExchangerDesign` (27), `Common` (19), `PHXDesign` (3) and `AirCoolerDesign` (5),
+      > **including the full 6×7 `htf_props` table** — which is the only place φ enters, so the
+      > fluid is captured automatically. `Outputs` is empty before `execute()`, so the export is
+      > naturally inputs-only and needs no filtering. **Hash a canonical JSON dump of that dict**
+      > plus `PySAM.__version__` (7.1.1.post1) and the ssc build string (via ctypes on
+      > `.venv\Lib\site-packages\PySAM\ssc.dll`, `CLAUDE.md` §1 — note `from PySAM import ssc`
+      > does **not** work, it is a DLL not a module).
+      >
+      > Two things this settles: the key needs **no hand-maintained parameter list** (the original
+      > worry), and it covers the `PHXDesign`/`AirCoolerDesign` defaults `build()` never sets
+      > explicitly but which still affect the map — 64 fields against the ~30 I had estimated
+      > from reading `build()`, so a hand-list would have missed roughly half.
 - [ ] **Run the Morris screening on the costed screening grid (8.8 h)** *before* spending map
       builds on the envelope — it tells you which map-class axes deserve levels.
 - [ ] **Wire the exergy layer into the integrated model** — every response functional is computable
