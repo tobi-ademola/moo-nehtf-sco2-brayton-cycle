@@ -39,9 +39,16 @@
 - [ ] **Split `Ed_upstream` into receiver / TES / tank terms** — the remaining half of
       `MASTER_PLAN.md` §11 item 6. Tier 2 currently lumps everything upstream of the power block.
       An extension, not a defect, but worth having before the envelope is written up.
-- [ ] **Partition the decision vector by map-rebuild cost** before any sweep. Cycle-design variables
-      force a ~35 min UDPC rebuild (`CLAUDE.md` §4.15); SM and t_TES do not. Cache maps per
-      cycle-design or the campaign is unaffordable. (`MASTER_PLAN.md` §11)
+- [x] ~~Partition the decision vector by map-rebuild cost~~ — done 2026-08-19,
+      `scripts/design_sweep_grid.py` → `results/sweep_grid_design_*`. **7 map-class, 2
+      tower-class, 1 free.** Target envelope costs **29.7 h** (30 maps + 960 tower runs), 64 % of
+      it map building. The second site is **+21.9 %**, not +100 %; the φ = 0 control is **+25 %**,
+      not +100 %.
+- [ ] **Implement the map cache, keyed by cycle design** — the costing above is only valid with
+      it. Two grid points differing only in SM, t_TES, site or d_p share a map *exactly*; without
+      a cache the campaign rebuilds identical maps and the 29.7 h becomes fiction.
+- [ ] **Run the Morris screening on the costed screening grid (8.8 h)** *before* spending map
+      builds on the envelope — it tells you which map-class axes deserve levels.
 - [ ] **Wire the exergy layer into the integrated model** — every response functional is computable
       but the campaign needs it in the loop, not beside it.
 - [ ] **Run the Morris screening** over the ten decision variables (Obj 3, part 2).

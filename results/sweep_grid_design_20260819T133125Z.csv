@@ -1,0 +1,6 @@
+grid,sites,map_axes,tower_axes,n_maps,n_runs,map_hours,run_hours,total_hours,within_budget
+screening (Morris),1,phi=3;T_HTF=3,SM=3;t_TES=3,12,108,7.6,1.2,8.799999999999999,True
+minimal envelope,2,phi=3;T_HTF=3,SM=3;t_TES=3,12,216,7.6,2.4,10.0,True
+target envelope,2,phi=4;T_HTF=3;P_H=2,SM=4;t_TES=4,30,960,19.0,10.666666666666666,29.666666666666664,True
+dense envelope,2,phi=5;T_HTF=4;P_H=3,SM=5;t_TES=5,72,3600,45.6,40.0,85.6,False
+all map axes at 3,2,phi=3;T_HTF=3;P_H=3;PR=3;f_RC=3,SM=3;t_TES=3,324,5832,205.2,64.8,270.0,False
