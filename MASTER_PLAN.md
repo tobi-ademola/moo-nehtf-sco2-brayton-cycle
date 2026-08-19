@@ -402,13 +402,17 @@ Ordered. Each item blocks the ones below it. **Nothing in §12 competes with the
    part, not the plumbing — a sweep reports across the whole range, so a bad bound corrupts the
    whole surface. Partition the vector by **rebuild class** at the same time (§7 Stage 2).
 5. **Morris screening** (§7 Stage 1) over the 10 variables. ← **Objective 3, first half.**
-6. **Exergy reporting layer** (§5) — **de-risked ahead of time**: the arithmetic is already
-   verified end-to-end by `scripts/exergy_layer_check.py` on the standalone cycle. What remains is
-   wiring it to the *integrated* model and adding the receiver/TES/tank Ė_D terms, not proving the
-   method. ⬆ **Moved AHEAD of the sweep campaign on 2026-08-15, reversing its old "build it last"
-   position.** Ė_D is one of the metrics mapped over the envelope (§3), so it must be online before
-   the campaign starts — wiring it afterwards means re-running every point, in both fluid
-   configurations, at both sites.
+6. ✅ **Exergy reporting layer** (§5) — **DONE 2026-08-19.** `scripts/exergy.py` is the callable
+   layer and `scripts/run_integrated_annual.py` collects it on every case, so Ė_D is online
+   *before* the campaign — which was the whole point of moving this ahead of the sweep on
+   2026-08-15. Two tiers: **tier 1** (design point, per component, free — it rides the existing
+   0.1 s solve) gives η_II 0.7626 with the HTR dominant at 40.5 % and the balance closing at
+   1.53e-04; **tier 2** (annual, hourly dead state) is necessarily **plant-level**, because the
+   UDPC map carries no per-hour state points, so no per-component Ė_D exists off-design
+   (`DECISIONS.md` D1 annotation). ⚠ **Still outstanding from this item: the receiver / TES /
+   tank Ė_D terms.** Tier 2 currently lumps everything upstream of the power block into
+   `Ed_upstream`; splitting it is a genuine extension, not a bug, and is worth doing before the
+   envelope is written up.
 7. **Parametric sweep campaign** (§7 Stage 2) — φ, d_p and the cycle parameters across their full
    feasible ranges, **each point paired with a φ = 0 base-salt control run**. ← **Objective 3
    second half + Objective 4.** This is now the project's largest single compute commitment;

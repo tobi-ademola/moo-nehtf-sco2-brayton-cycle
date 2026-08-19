@@ -20,8 +20,25 @@
 
 ---
 
+## Done since (Session H, 2026-08-19)
+
+- [x] **Wire the exergy layer into the integrated model** — `scripts/exergy.py` (two tiers,
+      self-validating), collected on every case by `run_integrated_annual.py`. Tier 2 is
+      plant-level by construction: the UDPC map carries no per-hour state points.
+- [x] **Diagnose the 27 negative-Ed hours** — the startup hypothesis was *refuted* (1 of 27);
+      `m_dot_pc` does not reconcile with `q_pb` in a thin part-load tail. Re-parameterised by
+      duty → `negative_Ed_hours = 0` on all three cases. `CLAUDE.md` §4.17.
+- [x] **Run all three integrated cases** — the §7.5 steam-vs-sCO₂ inference is now a tested
+      result: **+13.05 %** annual energy, and the exergy layer shows the advantage is conversion
+      quality, not better resource use.
+
+---
+
 ## Open — next up
 
+- [ ] **Split `Ed_upstream` into receiver / TES / tank terms** — the remaining half of
+      `MASTER_PLAN.md` §11 item 6. Tier 2 currently lumps everything upstream of the power block.
+      An extension, not a defect, but worth having before the envelope is written up.
 - [ ] **Partition the decision vector by map-rebuild cost** before any sweep. Cycle-design variables
       force a ~35 min UDPC rebuild (`CLAUDE.md` §4.15); SM and t_TES do not. Cache maps per
       cycle-design or the campaign is unaffordable. (`MASTER_PLAN.md` §11)

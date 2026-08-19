@@ -192,7 +192,8 @@ Sco2CspUdPcTables  --(ud_ind_od table)-->  TcsmoltenSalt
 
 ---
 
-## 4. GOTCHAS (each one cost real time — 4.1–4.6 Session B, 4.7–4.10 Session C)
+## 4. GOTCHAS (each one cost real time — 4.1–4.6 Session B, 4.7–4.10 Session C,
+##    4.17–4.18 Session H, from wiring the exergy layer into the integrated model)
 
 ### 4.1 Some `od_*` inputs are arrays, not scalars
 `od_generate_udpc`, `od_set_control`, `od_T_t_in_mode`, `od_cases`, `od_P_mc_in_sweep`,
@@ -460,6 +461,63 @@ def say(line=""):
 Setting `PYTHONIOENCODING=utf-8` also works but is environmental — it silently reintroduces the
 crash on any machine that lacks it, so prefer the in-script fix. Hit and fixed 2026-08-15 in
 `scripts/report_htf_properties.py`.
+
+
+### 4.17 `m_dot_pc` does not reconcile with `q_pb` in deep part-load hours
+
+Same family as §4.9 — a documented output whose value cannot be trusted — but narrower and
+nastier, because it is **regime-dependent**: the two agree at design and diverge only in a thin
+part-load tail, so no design-point check can find it.
+
+At the design point they close exactly:
+`1240 kg/s × 1.0966 kJ/kg·K × 166.7 K = 226.7 MW = peak q_pb`. Across all 6039 operating hours
+of the integrated case they agree to a **median +0.004 %**. But in 27 hours — 24 of them below
+10 % of peak flow — the flow-derived duty came out a **median 61 % LOW**, which made the HTF
+stream appear to deliver less exergy than the block produced work: `Ed < 0`, a second-law
+violation.
+
+**`q_pb` and `P_cycle` are the mutually consistent pair** (their ratio *is* the reported hourly
+efficiency); `m_dot_pc` is the odd one out. So **parameterise any hourly energy or exergy
+quantity by the DUTY, not by the mass flow**:
+
+```python
+Ex = q_pb * exergy.carnot_lm_factor(T_hot_K, T_cold_K, T0_K)   # not m*cp*dT
+```
+
+`scripts/exergy.py` does this and reports `mdot_duty_median_dev_pct` so the discrepancy stays
+visible — a future PySAM that fixes the part-load flow shows up as that number staying at zero
+while `negative_Ed_hours` stays at zero too. Diagnosed by
+`scripts/diagnose_negative_exergy_hours.py` (2026-08-19); artifacts in
+`results/negative_exergy_hours_*`.
+
+⚠ Two traps found alongside it:
+
+- **A `log(T_hot/T_cold)/(T_hot − T_cold)` availability factor catastrophically cancels** as
+  ΔT → 0 — both terms vanish together and the quotient becomes float noise long before the
+  difference underflows. An `abs(dT) < 1e-12` guard is **not** enough; it protects the exact-zero
+  case and leaves the whole near-zero neighbourhood broken (measured: garbage at ΔT = 1e-9 K).
+  Use `math.log1p(dT / T_cold) / dT`. Near-isothermal hours are exactly what deep part-load and
+  TES-hold produce, so this is not a corner case here.
+- **Do not average the violation away.** 27 bad hours out of 6040 moved the annual total by
+  ~0.05 % and were invisible in every aggregate — `Ed` summed to a large positive number and
+  η_II looked entirely plausible. Instrument the hour count as an output.
+
+### 4.18 `design_magnitudes()` leaks the sCO₂ design point into the steam control case
+
+`run_integrated_annual.py` calls `design_magnitudes()` for **every** case, including
+`steam_same_T`, and it is right to: the control needs the same `T_htf_hot`/`T_htf_cold`, and
+identical loop temperatures are the entire point of a control that isolates `pc_config`.
+
+But that function also returns the sCO₂ cycle's **per-component exergy**, and anything merged
+from it travels into a case that does not run an sCO₂ cycle. The first three-case run printed
+the sCO₂ breakdown **three times, identical to the digit**, once under a steam heading — a number
+that looks like a result and is an artifact of where it was computed. Nothing raised.
+
+**Rule: when a shared setup helper returns more than the shared quantities, strip the
+case-specific extras at the branch and say that you stripped them.** The steam branch now deletes
+the `ex_*` keys and sets `ex_tier1_note`, so the report prints *why* the row is absent rather than
+just omitting it. A silent omission and a wrong number are equally bad in a results table; only a
+stated absence is safe.
 
 ---
 

@@ -1267,3 +1267,99 @@ campaign, or it must be re-run to collect Ė_D. (c) Run the Morris screening. (d
 grid with **both TMY sites in view**, a φ = 0 control at every point, a declared T_hot floor — and
 **d_p at low density**, since D6 establishes it as a known null dimension in the nominal, so the run
 budget belongs on φ and the cycle variables.
+
+---
+
+## 2026-08-19 — Session H (continued): the exergy layer, wired in and running
+
+**Task.** Wire the exergy layer into the integrated model before the sweep campaign, so Ė_D does
+not have to be collected by re-running every point later (`DECISIONS.md` D1 annotation).
+
+**1. Built `scripts/exergy.py` — the callable layer.** The 2026-08-13 check proved a correct layer
+*could* be built, but it was a proof script that solved case F and reported it; the integrated
+model carried no exergy at all. Two tiers, self-validating against 14 analytic cases in ~0.1 s
+with no PySAM.
+
+**2. The refactor was forced by a real trap.** `validate_dostal.entropy_generation` derived the hot
+salt temperature internally as `T_TURB_IN_C + DT_PHX_HOT_APPROACH` = **720 °C**. The integrated
+model runs a **700 °C** hot tank, so calling that function from the integrated lane would have been
+**20 K too high** — inflating the salt-side exergy input and opening the balance, with nothing
+raised. `T_htf_hot_C` is now an explicit argument; `validate_dostal` is a thin wrapper passing its
+own constant. **No drift**: eta 0.51289, total Sgen +10.22521, HTR 1265.62 kW (41.4 %), residual
+1.9491 kW (1.49e-04) — every §7 and D1 baseline to the digits printed.
+
+**3. Verified by execution, not assumed, before designing anything:** `Sco2CspUdPcTables` *does*
+expose the full 12-element state-point set (so tier 1 is free — it rides the existing 0.1 s solve);
+hourly units are `q_pb` MWt, `P_cycle` MWe, `m_dot_pc` kg/s, `T_pc_*` °C, `gen` kW; and
+back-solving `q_pb` gives cp = 1.0966 kJ/kg·K against the property module's 1.0978 at the same mean
+temperature — **0.1 % apart, so the tower and the Objective 1 module already agree.**
+
+**4. THE GUARD FIRED ON THE FIRST RUN — 27 of 6040 operating hours had Ed < 0.** A second-law
+violation, and invisible in every aggregate: Ed summed to a large positive number and eta_II looked
+entirely plausible at 0.727. `scripts/diagnose_negative_exergy_hours.py` tested four candidates.
+
+⚠ **My leading hypothesis — startup transients — was REFUTED: 1 of 27, not 27 of 27.** Recorded as
+a refutation rather than quietly dropped. What the data showed instead: `q_pb` and `P_cycle` are
+mutually consistent in every offending hour (their ratio *is* the reported hourly eta, ~0.33 against
+0.5055 design), while `m_dot_pc × cp × ΔT` under-reports `q_pb` by a **median 61 % within those
+hours**; 24 of 27 sit below 10 % of peak flow.
+
+**5. Fixed by re-parameterising the annual layer by DUTY**, `Ex = q_pb · carnot_lm_factor(...)`,
+algebraically identical to the mass-flow form (asserted in `validate()`) but resting on the
+trustworthy input. **`negative_Ed_hours` 27 → 0 on all three cases.**
+
+⚠ **A precision correction to my own first report.** The "61 %" is the median *within the offending
+hours*. Across all 6039 operating hours flow and duty agree to a median **+0.004 %** (now reported
+as `mdot_duty_median_dev_pct`). `m_dot_pc` is **not** broadly wrong — it diverges in a thin tail.
+The loose version would have justified distrusting an output that is almost always right.
+
+⚠ **A defect I introduced and my own test caught.** `carnot_lm_factor` first used
+`log(T_hot/T_cold)/(T_hot − T_cold)`, which catastrophically cancels as ΔT → 0; an
+`abs(dT) < 1e-12` guard still returned noise at ΔT = 1e-9 K. Found by a **continuity assertion**,
+not by reading the code. Now uses `log1p` and is smooth to ΔT = 0 — which matters, because
+near-isothermal hours are exactly what deep part-load and TES-hold produce.
+
+**6. Second defect, caught before reporting results.** The first three-case run printed **tier-1
+exergy for `steam_same_T`** — the sCO₂ breakdown, identical to the digit, three times, once under
+a steam heading. `design_magnitudes()` is called for every case (the control legitimately needs the
+same loop temperatures) but also returns sCO₂-cycle-specific exergy. Now stripped for that case,
+with the omission **reported** via `ex_tier1_note` rather than silently absent. Both traps are
+recorded as `CLAUDE.md` **§4.17** and **§4.18**.
+
+**7. All three cases, artifact `results/integrated_annual_20260819T131827Z.*`:**
+
+| case | annual kWh | nameplate kW | rec pump MW | eta_II pb | eta_II col | neg Ed h |
+|---|---|---|---|---|---|---|
+| sco2_n3 | 440,206,500 | 62,612 | 49.55 | 0.7173 | 0.2686 | 0 |
+| sco2_n5 | 442,092,058 | 62,587 | 49.55 | 0.7193 | 0.2688 | 0 |
+| steam_same_T | 389,388,747 | 22,945 | 86.73 | 0.6300 | 0.2933 | 0 |
+
+**The `THESIS_SYNTHESIS.md` §7.5 inference is now a TESTED RESULT: sCO₂ beats steam by +13.05 %**
+on annual energy at identical fluid, loop temperatures and field — only `pc_config` differs. Map
+resolution n=5 vs n=3 is +0.428 %, still inside the 1 % screening threshold.
+
+**8. What the exergy layer bought immediately.** Steam extracts **more** exergy from the salt
+(884,263 vs 813,290 MWh) and converts it **worse** (eta_II 0.6300 vs 0.7173) — so the sCO₂ advantage
+is **conversion quality, not better use of the resource**, a distinction annual energy alone cannot
+make. Steam's higher *collection* efficiency (0.2933 vs 0.2686) is not a virtue either: it comes
+from returning the HTF colder, which is why its receiver pump draws 86.73 MW against 49.55 MW and
+its nameplate is **a third** of the sCO₂ cases on only 12 % less annual energy. That tension is
+invisible in the energy column and explicit in the exergy columns — the argument for wiring this in
+*before* the campaign rather than after.
+
+**Tier 1 independently corroborates case F.** eta_II **0.7626**, HTR-dominant at **40.5 %**, balance
+1.53e-04, all eight components positive — at a *different* design point from case F's 76.56 % /
+41.4 %. Two independent designs both landing HTR-dominant is a stronger claim against Battisti 2023
+(`SOURCES.md` F2) than either alone.
+
+**Knowledge files updated:** `CLAUDE.md` (§4 header, **§4.17**, **§4.18**), `DECISIONS.md` (D1
+annotated — layer wired in, fallback retired in fact; annual tier plant-level by construction),
+`MASTER_PLAN.md` (§11 item 6 closed, with the receiver/TES/tank split flagged as still outstanding),
+`THESIS_SYNTHESIS.md` (§7.5 inference promoted to a tested result with the full table),
+`TODO.md`, this log.
+
+**Next.** (a) Split `Ed_upstream` into receiver / TES / tank terms — the remaining half of §11
+item 6, an extension rather than a defect. (b) Partition the decision vector by map-rebuild cost
+(~35 min for cycle-touching variables, ~30 s for SM and t_TES) and design the sweep grid, with both
+TMY sites in view, a φ = 0 control at every point, a declared T_hot floor, and **d_p at low
+density** per D6. (c) Run the Morris screening.

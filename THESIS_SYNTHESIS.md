@@ -1018,6 +1018,30 @@ model chain — an end-to-end consistency check on the whole property → plant 
 deliberately still the **steam Rankine**, which cannot exploit a 700 °C source. Realising the
 chloride's advantage is precisely the job of the sCO₂ block, i.e. of Module F.
 
+> ✅ **That attribution was an INFERENCE. It is now a TESTED RESULT (2026-08-19).**
+> `scripts/run_integrated_annual.py` runs a `steam_same_T` control at **identical fluid,
+> identical loop temperatures and identical field — only `pc_config` differs** — so any delta is
+> the power block and nothing else. Artifact: `results/integrated_annual_20260819T131827Z.*`.
+>
+> | case | annual kWh | nameplate kW | rec pump MW | η_II power block |
+> |---|---|---|---|---|
+> | sCO₂ (UDPC n=3) | 440,206,500 | 62,612 | 49.55 | 0.7173 |
+> | sCO₂ (UDPC n=5) | 442,092,058 | 62,587 | 49.55 | 0.7193 |
+> | steam Rankine | 389,388,747 | 22,945 | 86.73 | 0.6300 |
+>
+> **sCO₂ beats steam by +13.05 % on annual energy**, with design efficiency 0.50547 vs 0.41200.
+> The inference is confirmed in direction and now quantified.
+>
+> **The exergy layer says something the energy column cannot, and it is the more interesting
+> result.** Steam extracts **more** exergy from the salt (884,263 vs 813,290 MWh) and converts it
+> **worse** (η_II 0.6300 vs 0.7173): the sCO₂ advantage is **conversion quality, not better use
+> of the resource**. Steam's *higher* collection efficiency (0.2933 vs 0.2686) is not a virtue
+> either — it comes from returning the HTF colder, which is exactly why its receiver pump draws
+> **86.73 MW against 49.55 MW** and its nameplate collapses to **a third** of the sCO₂ cases on
+> only 12 % less annual energy. That trade-off is invisible in annual energy and explicit in
+> exergy, which is the argument for having wired the layer in *before* the sweep campaign rather
+> than after (`DECISIONS.md` D1 annotation).
+
 ### 7.6 Finding 4 — a negative result about grid density, correctly interpreted
 
 Two table-robustness cases were run. Dropping from 6 rows to the 3-row minimum across the same span

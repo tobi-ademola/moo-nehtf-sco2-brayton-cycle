@@ -5,7 +5,9 @@
 
 **Last updated:** 2026-08-19 — Session H. **D6 added: particle size `d_p` is represented as a
 declared size-invariance over an evidenced band**, which closes the last blocker in
-`MASTER_PLAN.md` §10. D5's consequence 3 is annotated accordingly.
+`MASTER_PLAN.md` §10. D5's consequence 3 is annotated accordingly. **D1 annotated: the exergy
+layer is now wired into the integrated model**, not merely proved buildable — with the annual
+tier necessarily plant-level, since the UDPC path carries no per-hour state points.
 Previously 2026-08-15 — Session G. **D5 added: the supervisor removed multi-objective
 optimisation from scope.** D1 and D3 are annotated where the revision changes what they mean; their
 resolutions are unchanged. D2 and D4 are untouched by the revision.
@@ -68,6 +70,37 @@ The balance — Ex_in(salt) = W_net + ΣĖD — is the load-bearing one: it exer
 *s*, both mass flows, the salt-side properties and the work terms simultaneously, so it catches
 scaling and unit errors that per-component sign checks cannot. Second-law efficiency comes out at
 **76.56 %**, and the HTR-dominant ranking matches Battisti 2023 (`SOURCES.md` F2) independently.
+
+> **Annotation 2026-08-19 (Session H) — THE LAYER IS NOW WIRED IN, and the fallback is retired
+> in fact rather than in principle.** The 2026-08-13 check proved a correct layer *could* be
+> built; it was a proof script that solved case F and reported it, so the integrated model still
+> carried no exergy at all. That is now closed: `scripts/exergy.py` is the callable layer and
+> `scripts/run_integrated_annual.py` collects it on every case. Two tiers, and the distinction
+> is a **constraint, not a preference**:
+>
+> - **Tier 1, design point, PER COMPONENT.** Rides the 0.1 s design solve the script already
+>   performed, so it costs nothing. On the integrated design (700 °C, 115 MW): η_II **0.7626**,
+>   HTR-dominant at **40.5 %**, balance closing at **1.53e-04**, all eight components positive.
+>   This independently corroborates the case F result (76.56 %, HTR 41.4 %) at a *different*
+>   design point — two independent designs both landing HTR-dominant is a stronger claim against
+>   Battisti 2023 (`SOURCES.md` F2) than either alone.
+> - **Tier 2, annual, PLANT LEVEL ONLY.** The UDPC map carries normalised response shapes
+>   (`CLAUDE.md` §4.11), so there are **no per-hour state points and therefore no per-component
+>   Ė_D at any hour but the design point.** Tier 2 reports the lumped `Ex_htf − W_gross`, which is
+>   exact and needs no state points, with an **hourly dead state** T0(t) = tdry(t) — necessary
+>   because Objective 5 compares two climates whose ambient distributions differ. ⚠ **Do not
+>   infer an annual component ranking from the design-point one**; off-design shifts it.
+>
+> Two things the wiring exposed, both recorded as gotchas (`CLAUDE.md` §4.17, §4.18): `m_dot_pc`
+> does not reconcile with `q_pb` in deep part-load hours, which produced 27 hours of **negative
+> Ė_D** until the layer was re-parameterised by duty; and `design_magnitudes()` leaked the sCO₂
+> design point into the steam control, printing sCO₂ exergy under a steam heading.
+>
+> **What the layer bought immediately, on the three-case run:** steam extracts *more* exergy from
+> the salt (884,263 vs 813,290 MWh) and converts it *worse* (η_II 0.6300 vs 0.7173). The sCO₂
+> advantage is **conversion quality, not better use of the resource** — a distinction annual
+> energy alone cannot make, and exactly the kind the Objective 4 benefit envelope would otherwise
+> have reported in energy terms only.
 
 **Consequence:** the `+~1 day` CoolProp-reconstruction risk in `MASTER_PLAN.md` §5 is **closed,
 not merely unlikely**, and the D1 fallback can be retired. ĖD — named in Objective 2, and one of
