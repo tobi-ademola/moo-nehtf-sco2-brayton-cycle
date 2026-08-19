@@ -4,8 +4,8 @@ Nanofluid property module -- OBJECTIVE 1, reused from prior work
 
 PURPOSE. Maps nanoparticle mass fraction and temperature to the thermophysical
 properties every other module in this project consumes. This is MASTER_PLAN.md
-Objective 1, which §36 records as "largely reused from prior work" -- this file
-IS that prior work. It is a heavily-validated asset: treat it as a dependency to
+Objective 1, recorded there as largely reused from prior work -- this file IS
+that prior work. It is a heavily-validated asset: treat it as a dependency to
 call, not as code to re-derive. `validate()` re-checks the fits against the
 measured anchor points and is the thing to run if you suspect drift.
 
@@ -29,12 +29,19 @@ CONSUMED BY. scripts/htf_sam_bridge.py, which turns `htf_table_rows()` into the
 ---
 
 Maps nanoparticle mass fraction (phi_mass, wt fraction) and temperature to the
-four thermophysical properties consumed by the sCO2 / SAM techno-economic model:
+five thermophysical properties named by Objective 1 and consumed by the sCO2 /
+SAM techno-economic model:
 
-    rho(T)  density              -> mass flow, inventory volume, dP
-    cp(T)   specific heat        -> storage inventory        (objective O4)
-    k(T)    thermal conductivity -> HTF-side heat transfer   (objective O1)
-    mu(T)   dynamic viscosity    -> pumping power            (objective O3)
+    rho(T)    density              -> mass flow, inventory volume, dP
+    cp(T)     specific heat        -> storage inventory / TES energy density
+    k(T)      thermal conductivity -> HTF-side heat transfer
+    alpha(T)  thermal diffusivity  -> transient/receiver response  [DERIVED]
+    mu(T)     dynamic viscosity    -> pumping power
+
+alpha = k/(rho*cp) is derived rather than independently correlated, on purpose --
+see diffusivity_nf(). It was added 2026-08-15 when the supervisor's revised
+Objective 1 named thermal diffusivity explicitly; the quantity was already inside
+this module as the input Han's k was back-derived from, but was not an output.
 
 COMMITTED SYSTEM (locked):
   Base fluid   : NaCl-KCl-MgCl2 ternary chloride eutectic   ......... "A1"
@@ -48,9 +55,19 @@ COMMITTED SYSTEM (locked):
                  never used for magnitudes here.
 
 Every property returns a Prop(nominal, lo, hi). Bands combine the A1 base-salt
-95% uncertainties with an enhancement-model uncertainty, so the robust optimiser
-can sample within them. All property models are implemented; sourcing/citation
-status for each input is documented next to its definition below.
+95% uncertainties with an enhancement-model uncertainty, so a parametric or
+uncertainty sweep can sample within them. All property models are implemented;
+sourcing/citation status for each input is documented next to its definition
+below -- Objective 1 now requires DOCUMENTED PROVENANCE per correlation, so those
+comments are a deliverable, not annotation. The provenance map lives in
+PROPERTIES.md and the full source entries in SOURCES.md sections B, C and D.
+
+NOT REPRESENTED HERE: particle-size (d_p) dependence. Every enhancement fit is
+anchored to Han/B3's series at a FIXED particle size, so this module is size-blind
+and a d_p sweep would move nothing. The revised Objective 3 names particle size as
+a swept parameter, so this is now a blocking gap rather than a declared exclusion
+-- see MASTER_PLAN.md §10 for the three options and do not sweep d_p through this
+module until one of them is implemented and recorded in DECISIONS.md.
 """
 
 from __future__ import annotations
@@ -79,7 +96,8 @@ class Prop:
         """Map u in [0,1] onto the band (0->lo, 0.5->nominal, 1->hi).
 
         Piecewise-linear so asymmetric bands are handled correctly. This is the
-        hook the robust/uncertainty-aware MOO calls.
+        hook an uncertainty-aware parametric sweep calls to propagate the band
+        edges through the plant model.
         """
         if u <= 0.5:
             return self.lo + (self.nominal - self.lo) * (u / 0.5)
@@ -508,11 +526,107 @@ def viscosity_nf(phi_v: float, base: dict, np_: Nanoparticle,
     return Prop(nominal, lo, hi)
 
 
+# =============================================================================
+# Thermal diffusivity  alpha = k / (rho * cp)
+# -----------------------------------------------------------------------------
+# ADDED 2026-08-15 (Session G). The revised Objective 1 names thermal diffusivity
+# as one of the five required property models (MASTER_PLAN.md §1). It was already
+# present in this module as an INPUT -- Han/B3's measured diffusivity ratios are
+# what k was derived from (see the HAN_K comment above) -- but was never an
+# OUTPUT. This closes that gap.
+#
+# alpha is NOT an independent correlation and must not be presented as one. It is
+# the DEFINED combination k/(rho*cp), so it inherits its provenance from the three
+# properties it is built out of. Giving it a separate fit would let alpha drift out
+# of consistency with k, rho and cp -- the one failure mode a derived property has.
+#
+# HAN_ALPHA below is therefore a CROSS-CHECK, not a fit target: it is Han's own
+# measured diffusivity enhancement (their Sec. 3.4), the quantity our k was
+# back-derived from. Round-tripping k -> alpha must return it, up to exactly one
+# known offset: this module uses the VOLUME fraction for density where Han's own
+# table used the mass fraction (see mass_to_volume_fraction), so the recovered
+# alpha runs high by that same ~0.4-3.8%, plus whatever the saturating k FIT
+# misses Han's measured k by, and by nothing else. A residual outside that
+# envelope means one of rho / cp / k has drifted -- which is precisely the
+# consistency this check is here to police. check_diffusivity_roundtrip() reports
+# the residual so the disclosed inconsistency of THESIS_SYNTHESIS §4.8 carries a
+# measured number rather than an estimate.
+#
+# MEASURED 2026-08-15, at 500 C (Han's own measurement temperature):
+#     0.2 wt%: derived +11.67% vs Han +10.95%  ->  offset +0.65%
+#     0.7 wt%: derived +20.20% vs Han +18.98%  ->  offset +1.02%
+#     2.0 wt%: derived +42.74% vs Han +37.23%  ->  offset +4.01%
+# The trend is monotonic in loading, as the density-convention explanation
+# requires. The 2.0 wt% point sits slightly ABOVE the 3.8% density offset, and
+# the excess is fully accounted for: the saturating k fit returns +39.75% against
+# Han's +39.55%, worth 1.3975/1.3955 - 1 = +0.14%, giving 3.8 + 0.14 ~ 3.95%
+# against the observed 4.01%. Nothing is unexplained. The 5% check ceiling is set
+# just above this so a genuine drift trips it while the known offset does not.
+# =============================================================================
+HAN_ALPHA = ((0.2, 0.1095), (0.7, 0.1898), (2.0, 0.3723))   # Han/B3 Sec. 3.4
+
+
+def alpha_enhancement_han(phi_mass_wt: float) -> float:
+    """Han/B3's MEASURED diffusivity enhancement [fraction]. Cross-check only.
+
+    Do NOT use this to build alpha -- use diffusivity_nf(), which derives alpha
+    from k, rho and cp so it cannot drift out of consistency with them. This
+    exists so the derivation can be checked against the data it came from.
+    """
+    if phi_mass_wt < 0:
+        raise ValueError("loading must be >= 0")
+    return _interp_linear(phi_mass_wt, HAN_ALPHA)
+
+
+def diffusivity_nf(k: Prop, rho: Prop, cp: Prop) -> Prop:
+    """Nanofluid thermal diffusivity alpha = k/(rho*cp) [m2/s].
+
+    Band edges are the CONSERVATIVE combination -- alpha is largest when k is at
+    its upper edge and rho*cp at their lower edges, and vice versa. This over-
+    covers the true band because the three properties' errors are not independent
+    (they share the base-salt correlations and the same loading), so treat it as
+    an outer bound, not a distribution.
+    """
+    return Prop(
+        nominal=k.nominal / (rho.nominal * cp.nominal),
+        lo=k.lo / (rho.hi * cp.hi),
+        hi=k.hi / (rho.lo * cp.lo),
+    )
+
+
+def check_diffusivity_roundtrip(phi_mass_wt: float, T_C: float = 500.0,
+                                np_: Nanoparticle = CUO) -> dict:
+    """Recover the diffusivity ENHANCEMENT from the module and compare to Han.
+
+    Returns {'phi_wt', 'E_derived', 'E_han', 'ratio_offset_pct'}, where
+    ratio_offset_pct is the deviation of the derived alpha RATIO from Han's
+    measured one. Expected to be positive and of order the density-convention
+    offset (~0.4% at 0.2 wt% rising to ~3.8% at 2.0 wt%); see the header note.
+
+    Han measured at 500 C, so the default T_C is 500 -- comparing at another
+    temperature adds a base-property difference that is not part of the offset
+    being checked.
+    """
+    phi = phi_mass_wt / 100.0
+    p_nf = nanofluid_properties(phi, T_C, np_=np_)
+    p_b = nanofluid_properties(0.0, T_C, np_=np_)
+    a_nf = diffusivity_nf(p_nf["k"], p_nf["rho"], p_nf["cp"]).nominal
+    a_b = diffusivity_nf(p_b["k"], p_b["rho"], p_b["cp"]).nominal
+    E_derived = a_nf / a_b - 1.0
+    E_han = alpha_enhancement_han(phi_mass_wt)
+    return {
+        "phi_wt": phi_mass_wt,
+        "E_derived": E_derived,
+        "E_han": E_han,
+        "ratio_offset_pct": 100.0 * ((1.0 + E_derived) / (1.0 + E_han) - 1.0),
+    }
+
+
 def _warn_if_extrapolating(phi_mass: float) -> None:
     if phi_mass * 100.0 > HAN_PHI_MAX_WT + 1e-9:
         raise ValueError(
             f"loading {phi_mass*100:.2f} wt% exceeds the measured range "
-            f"(0-{HAN_PHI_MAX_WT} wt%). Constrain the optimiser instead of "
+            f"(0-{HAN_PHI_MAX_WT} wt%). Constrain the sweep range instead of "
             f"extrapolating the enhancement fits."
         )
 
@@ -524,13 +638,23 @@ def nanofluid_properties(phi_mass: float, T_C: float,
                          np_: Nanoparticle = CUO,
                          cp_model: str = "linear",
                          k_model: str = "saturating") -> dict:
-    """Return {rho, cp, k, mu} as Prop objects at (phi_mass [-], T_C [deg C])."""
+    """Return {rho, cp, k, alpha, mu} as Prop objects at (phi_mass, T_C [deg C]).
+
+    'alpha' (thermal diffusivity, m2/s) is DERIVED from the other three, not
+    independently correlated -- see diffusivity_nf(). It was added 2026-08-15 when
+    the revised Objective 1 named it explicitly; every existing caller that reads
+    the dict by key is unaffected by the extra entry.
+    """
     base = base_chloride_properties(T_C)
     phi_v = mass_to_volume_fraction(phi_mass, np_, base["rho"])
+    rho = density_nf(phi_v, base, np_)
+    cp = cp_nf(phi_mass, base, np_, model=cp_model)
+    k = conductivity_nf(phi_mass, base, np_, phi_v=phi_v, model=k_model)
     return {
-        "rho": density_nf(phi_v, base, np_),
-        "cp":  cp_nf(phi_mass, base, np_, model=cp_model),
-        "k":   conductivity_nf(phi_mass, base, np_, phi_v=phi_v, model=k_model),
+        "rho": rho,
+        "cp":  cp,
+        "k":   k,
+        "alpha": diffusivity_nf(k, rho, cp),
         "mu":  viscosity_nf(phi_v, base, np_, phi_mass=phi_mass),
     }
 
@@ -629,6 +753,21 @@ def validate(verbose: bool = True) -> bool:
         if verbose:
             print(f"  k   {w:>4} wt%: fit {100*got:+7.2f}%  Han {100*e:+7.2f}%  "
                   f"{'OK' if good else 'FAIL'}")
+
+    # Diffusivity round-trip (added 2026-08-15). alpha is derived, so the test is
+    # not "does it match a fit" but "does k/(rho*cp) return the alpha k came
+    # from". The residual should be POSITIVE and bounded by the disclosed
+    # density-convention offset; 5% is a deliberately loose ceiling that still
+    # catches a real drift in any of the three constituent properties.
+    for w, _ in HAN_ALPHA:
+        r = check_diffusivity_roundtrip(w)
+        good = -0.5 < r["ratio_offset_pct"] < 5.0
+        ok &= good
+        if verbose:
+            print(f"  a   {w:>4} wt%: derived {100*r['E_derived']:+7.2f}%  "
+                  f"Han {100*r['E_han']:+7.2f}%  "
+                  f"offset {r['ratio_offset_pct']:+.2f}%  "
+                  f"{'OK' if good else 'FAIL'}")
     return bool(ok)
 
 
@@ -657,6 +796,9 @@ if __name__ == "__main__":
         print(f"    k   = {p['k'].nominal:8.4f}  "
               f"[{p['k'].lo:.4f}, {p['k'].hi:.4f}] W/mK   "
               f"(E={100*k_enhancement(w):+.2f}%)")
+        print(f"    a   = {p['alpha'].nominal*1e7:8.4f}  "
+              f"[{p['alpha'].lo*1e7:.4f}, {p['alpha'].hi*1e7:.4f}] e-7 m2/s "
+              f"(derived k/rho.cp)")
         print(f"    mu  = {p['mu'].nominal*1e3:8.3f}  "
               f"[{p['mu'].lo*1e3:.3f}, {p['mu'].hi*1e3:.3f}] mPa.s")
 
