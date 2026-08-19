@@ -88,9 +88,9 @@ model rather than a search across it.
                                                                                              v
                                              [Obj5 climate robustness]  <-  [Obj4 benefit envelope]
                                                         |                            |
-                                              NOT STARTED - needs the      NOT STARTED - needs a
-                                              Southern Africa TMY          phi=0 control at EVERY
-                                              (missing, now BLOCKING)      swept point
+                                              NOT STARTED - both TMYs      NOT STARTED - needs a
+                                              now in hand (2026-08-19),    phi=0 control at EVERY
+                                              unblocked on data            swept point
 ```
 
 **Gate status, 2026-08-13.** The power-block gate is **PASSED**: the sCO₂ recompression cycle
@@ -220,7 +220,8 @@ trend line. Two design rules the old plan never needed:
   Cache maps per cycle-design or the grid is unaffordable. See §11 item 4.
 
 **Stage 3 — climate replication (Obj 5).** Re-run the Stage-2 envelope at a MENA site (Ouarzazate
-TMY, in hand) and a Southern-African site (Upington, **file missing — now blocking**, §10), and
+TMY, in hand) and a Southern-African site (Northern Cape / Redstone corridor, **TMY in hand since
+2026-08-19**, §10), and
 report whether the *shape* of the response surfaces and the *sign and size* of the nano benefit
 survive the climate change. This is a robustness claim about the maps, not a site-selection study.
 
@@ -310,11 +311,13 @@ dominant. Strictly additive; it sharpens Stage 1, it does not gate Stage 2.
       (`SOURCES.md` §C0 already reframes this from weakness to field convention.) Note the revised
       Objective 1 raises the bar here: it demands **documented provenance for each correlation**,
       which makes `PROPERTIES.md`'s provenance map a *deliverable*, not a working note.
-- [ ] ⚠ **PROMOTED TO BLOCKING 2026-08-15 — the Southern Africa TMY.** Objective 5 is no longer
-      post-defence. Morocco/Ouarzazate is in hand (`data/tmy/158192_31.05_-6.86_tmy-2022.csv`);
-      the Upington file (lat −28.29, lon 23.37) is **not on this machine** and must be
-      re-downloaded from NSRDB before Obj 5 can start. Cheap to fix, but nothing in Obj 5 can
-      begin without it — do it early rather than discovering it at the end.
+- [x] ~~⚠ **PROMOTED TO BLOCKING 2026-08-15 — the Southern Africa TMY.**~~ ✅ **CLOSED
+      2026-08-19 — the user supplied it.** `data/tmy/1292737_-28.27_23.38_tmy-2022.csv`, NSRDB
+      v4.0.1 TMY-2022, lat −28.27 lon 23.38, elev 1590 m, UTC+2 — the Northern Cape / Redstone
+      CSP corridor, **0.02° (~2.4 km) from the −28.29, 23.37 this item specified**. Same format
+      and column layout as the Morocco file, so both sites read through one code path.
+      **Both Objective-5 sites are now on disk and Obj 5 is unblocked on data.** See
+      `CLAUDE.md` §5 for the pair and the one timezone caveat (UTC+0 vs UTC+2).
 - [ ] ⚠ **NEW, BLOCKING — `d_p` (particle size) is named in Objective 3 and is not represented in
       any model layer.** The property module's enhancement fits are anchored to Han 2022 at a
       **fixed** particle size and carry no size dependence, so a d_p sweep would currently move
@@ -380,7 +383,9 @@ Ordered. Each item blocks the ones below it. **Nothing in §12 competes with the
    - ✅ **thermal diffusivity α** exposed by the property module (done 2026-08-15).
    - ⚠️ **`d_p`** — pick option (a)/(b)/(c) from §10 and record it in `DECISIONS.md`. **Blocking for
      Objective 3's particle-size sweep.**
-   - ⚠️ **Southern Africa TMY** re-download. **Blocking for Objective 5.** Do it now, not later.
+   - ✅ **Southern Africa TMY** — supplied 2026-08-19,
+     `data/tmy/1292737_-28.27_23.38_tmy-2022.csv` (Northern Cape / Redstone corridor). **No
+     longer blocking Objective 5.**
 4. **Wire the decision vector** — expose all 10 variables of §3 as model inputs with **declared
    feasible ranges and their hard constraints** (φ ≤ 2.0 wt%, T_cold ≥ 450 °C, T_hot ≤ 700 °C,
    `system_capacity > 0`). Under the revised objectives the *range* is the deliverable-critical

@@ -26,9 +26,12 @@ session the operational difference is small but it changes what runs are worth l
 - **Cost is the binding constraint.** Anything touching the cycle or the HTF forces a **~35 min**
   UDPC map rebuild (§4.15); SM and t_TES do not. Partition the grid on that line and cache maps
   per cycle-design, or the campaign is unaffordable.
-- **Two representation gaps are blocking, not cosmetic:** particle size `d_p` is named as a swept
-  parameter and is in no model layer, and the Southern Africa TMY needed by Objective 5 is missing
-  from this machine. Both are in `MASTER_PLAN.md` §10.
+- **ONE blocker remains, and it is a representation gap, not a missing file:** particle size `d_p`
+  is named as a swept parameter and is in **no model layer**, so a d_p sweep would return a flat
+  surface — a manufactured null result. `MASTER_PLAN.md` §10 has the three options; the choice must
+  be recorded in `DECISIONS.md` before any d_p sweep runs.
+  *(The second gap, the Southern Africa TMY, was closed 2026-08-19 — both Objective-5 sites are on
+  disk, §5.)*
 
 ---
 
@@ -459,20 +462,24 @@ In `C:\SAM\2025.4.16\solar_resource\` (2026.7.3 has the same set):
 `blythe_ca`, **`daggett_ca`** (CSP default), `des_moines_ia`, `fargo_nd`, `imperial_ca`,
 `phoenix_az`, `tucson_az` — all `psmv3_60_tmy`.
 
-In `data/tmy/` (gitignored — not committed, but on disk for every session):
-- `158192_31.05_-6.86_tmy-2022.csv` — NSRDB TMY, **lat 31.05, lon −6.86 = Ouarzazate region,
-  Morocco.** Ready-made **MENA site** (added Session D, 2026-08-13).
+In `data/tmy/` (gitignored — not committed, but on disk for every session). **Both Objective-5
+sites are now in hand:**
 
-⚠️ **BLOCKING as of 2026-08-15 — the Southern Africa TMY.** Previously tracked as "already
-downloaded by the user" at `C:\Users\meade\SAM Downloaded Weather
-Files\-28.2856_23.3667_..._nsrdb-msg-v1-0-0-tmy_60_tmy.csv` — **lat −28.29, lon 23.37 = Northern
-Cape, South Africa (Upington region), Objective 5 site.** **NOT FOUND on this machine** (checked
-under both `meade` and `chukw` user profiles, 2026-08-13). This was a footnote while Objective 5
-was post-defence; **the revised objectives put the climate-robustness study in scope, so nothing
-in Objective 5 can start until this file is back.** Re-download from NSRDB (same viewer that
-produced the Morocco file) into `data/tmy/`. It is cheap — do it before designing the sweep grid,
-not after running it, so the Objective-5 replication can reuse the campaign rather than repeat it.
-See `PROGRESS_LOG.md` 2026-08-13 and `MASTER_PLAN.md` §10.
+| file | lat, lon | elev | TZ | site | added |
+|---|---|---|---|---|---|
+| `158192_31.05_-6.86_tmy-2022.csv` | 31.05, −6.86 | 1260 m | UTC+0 | **Ouarzazate region, Morocco** — the **MENA** site | Session D, 2026-08-13 |
+| `1292737_-28.27_23.38_tmy-2022.csv` | −28.27, 23.38 | 1590 m | UTC+2 | **Northern Cape, South Africa** (Redstone CSP corridor) — the **Southern Africa** site | 2026-08-19 |
+
+Both are NSRDB **v4.0.1**, TMY-2022, 8760 hourly rows, identical column layout — so a script that
+reads one reads the other with no branching. ✅ **The Southern Africa TMY blocker (raised
+2026-08-15) is CLOSED.** The file supplied on 2026-08-19 sits at −28.27, 23.38, which is **0.02°
+(~2.4 km) from the −28.29, 23.37 the plan had targeted** — the same NSRDB neighbourhood, so the
+Objective-5 site is the one that was specified, not a substitute.
+
+⚠ Note the **timezone column differs (UTC+0 vs UTC+2)**. SAM reads the offset from the file header,
+so this needs no handling — but never hard-code a timezone when switching sites, and never compare
+raw hourly series between the two files without aligning on solar time first. Annual and monthly
+aggregates are unaffected.
 
 ---
 

@@ -682,8 +682,9 @@ Energy and Communication Conference (GPECOM)*.
 > (do their shape, and the sign and size of the nano benefit, survive a change of climate?), not a
 > site-selection exercise — several entries below *are* site-selection studies and should be cited
 > for method and resource data, not framing. And I5 (Ghana) is West rather than Southern Africa;
-> the committed Southern-African site is **Upington, Northern Cape** (lat −28.29, lon 23.37), whose
-> TMY file is **missing from this machine and must be re-downloaded** (`MASTER_PLAN.md` §10).
+> the committed Southern-African site is **Northern Cape, South Africa** — the NSRDB cell at
+> **lat −28.27, lon 23.38** (Redstone CSP corridor; the site was specified as −28.29, 23.37 and the
+> file sits 0.02° from it). ✅ **TMY in hand since 2026-08-19** (`CLAUDE.md` §5).
 
 ### I1. Hajou et al. 2025 — MENA/Mediterranean DNI zoning for CSP  [C]
 Hajou, A. et al. (2025). "Solar energy potential assessment in the MENA and Mediterranean

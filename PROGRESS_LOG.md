@@ -977,3 +977,199 @@ reports all 18 resolutions as ALREADY APPLIED.
 
 **SOURCES.md is now the single authority for citations in this project.** No second copy, no
 external ledger to consult first.
+
+---
+
+## 2026-08-15 — Code lane — ⚠ OBJECTIVES REVISED: multi-objective optimisation removed from scope
+
+**What happened.** The supervisor removed multi-objective optimisation from the thesis (flagged as
+post-graduate work) and reissued five objectives. This is a **scope instruction, not a technical
+finding**; it is recorded as `DECISIONS.md` **D5** and the new objectives are `MASTER_PLAN.md` §1.
+
+**The new objectives, in brief.** (1) T- and φ-dependent property models — ρ, cp, k, **thermal
+diffusivity**, μ — **with documented provenance per correlation**. (2) The integrated CSP tower /
+nano-HTF / two-tank TES / recompression sCO₂ model with energy, exergy, hydraulic and economic
+assessments. (3) Decoupled validation + **Morris screening** of the ten decision variables +
+**systematic parametric sweeps** of nanoparticle concentration, **particle size** and cycle
+operating parameters across their **full feasible ranges**, producing **response surfaces**.
+(4) The **full parametric envelope**, quantifying the net benefit of nano-enhancement vs the base
+salt **as a continuous function** of the varied parameters. (5) **Robustness of those maps across
+MENA and Southern African climates.**
+
+**Nothing built was invalidated.** No result, number, baseline or validation changed. The power
+block, property module, exergy layer, HTF↔SAM coupling, UDPC bridge and integrated annual run are
+all *more* load-bearing under the new objectives, because the deliverable is now a dense sweep over
+the model rather than a search across it. Every prior modelling decision (D1–D4) survives with only
+its **purpose** re-pointed, and each now carries a dated annotation in `DECISIONS.md` saying how.
+
+**Four consequences that create real work** — these are the entry's substance, not the edits:
+
+1. **Objectives 4 and 5 moved from post-defence into scope.** The Objective-4 benefit envelope is a
+   *difference of two surfaces*, so it needs a **φ = 0 base-salt twin at every swept point** — the
+   control is half of every run, not one run at the end. Objective 5 then repeats the envelope at a
+   second site. Budget roughly 4× a naive single-configuration grid.
+2. **The Southern Africa (Upington) TMY became a blocker.** It was a post-defence footnote; it is
+   missing from this machine and Objective 5 cannot start without it. Re-download it *before* the
+   sweep grid is designed so the replication reuses the campaign instead of repeating it.
+3. **`d_p` (particle size) became blocking.** It is named as a swept parameter and is represented in
+   **no model layer** — every enhancement fit is anchored to Han's series at fixed particle size.
+   Under the old objectives this was a defensible declared exclusion (an optimiser that never varies
+   a dimension just returns a lower-dimensional answer). Under the new one it is dangerous:
+   sweeping a variable the model cannot feel yields a **flat response surface**, i.e. a
+   *manufactured null result* reading as "particle size does not matter". Three options are written
+   up in `MASTER_PLAN.md` §10; the choice must be recorded in `DECISIONS.md` before any d_p sweep.
+4. **Declared ranges now carry the weight gradients used to.** An optimiser that meets a bad bound
+   simply avoids that corner; a sweep **reports across its whole declared range**, so an
+   indefensible bound corrupts the published surface. Every range in the decision vector needs a
+   stated basis — and the ΔT/pumping floor of `CLAUDE.md` §4.14 must be declared as a constraint of
+   the study rather than left as a guard.
+
+**Thermal diffusivity — the one gap closed this session.** Objective 1 names α explicitly. It was
+already *inside* `scripts/nanofluid_properties.py` as an **input** — Han 2022's measured diffusivity
+ratios are what the module's k was back-derived from — but was never an **output**. Now exposed as
+`diffusivity_nf()`, **derived** as α = k/(ρ·cp) rather than independently fitted, deliberately: an
+independent fit would give four correlations three degrees of freedom and let α drift out of the
+identity that defines it. Han's measured ratios therefore became a **test** instead of a fit target.
+
+**Round-trip result (500 °C, Han's own measurement temperature), and why the residual is a feature:**
+
+| φ (wt%) | α enhancement, derived | Han measured | offset |
+|---|---|---|---|
+| 0.2 | +11.67 % | +10.95 % | **+0.65 %** |
+| 0.7 | +20.20 % | +18.98 % | **+1.02 %** |
+| 2.0 | +42.74 % | +37.23 % | **+4.01 %** |
+
+The offset is **expected to be positive and to grow with loading**: the module uses the *volume*
+fraction for density where Han's tabulated densities used the *mass* fraction — a disclosed,
+deliberate divergence worth ~+0.4 % at 0.2 wt% rising to ~+3.8 % at 2.0 wt%. The remaining +0.14 %
+at 2.0 wt% is the saturating k fit returning +39.75 % against Han's +39.55 %. **Nothing is
+unaccounted for**, and a residual near *zero* would be the failure signal, not a success — it would
+mean the density convention had silently reverted. This turns the disclosed inconsistency of
+`THESIS_SYNTHESIS.md` §4.8 from an estimate into a measured number.
+
+**What ran.**
+
+- `scripts/nanofluid_properties.py` — α added (`diffusivity_nf`, `alpha_enhancement_han`,
+  `check_diffusivity_roundtrip`, `HAN_ALPHA`); `nanofluid_properties()` now returns five properties;
+  `validate()` extended with the round-trip. **`validate()` → True**, all cp and k fits unchanged.
+- `scripts/report_htf_properties.py` (**new**) — the Objective-1 evidence artifact: provenance table
+  per correlation, all five properties over 450–700 °C at five loadings, and the round-trip.
+  → `results/htf_properties_20260815T175201Z.{md,csv}`. Exit 0.
+
+**New tool gotcha, recorded as `CLAUDE.md` §4.16.** The first run of the new script died mid-report
+with `UnicodeEncodeError: 'charmap' codec can't encode character '₂'`. Result files here are written
+UTF-8 and rightly carry µ/₂/°C/—; the Windows console is **cp1252**. The common `say()` idiom — one
+function that both prints a line and appends it to the report — couples the artifact's encoding to
+the terminal's, and it fails *partway through*, so it reads as a logic error in whatever section
+died. Fixed by transliterating on the way to the console only
+(`line.encode("ascii", "replace")`), **not** by degrading the artifact to ASCII.
+
+**Literature.** `SOURCES.md` §H rescoped rather than pruned. Added **HS1 Morris 1991**
+(*Technometrics* 33(2):161–174, doi:10.1080/00401706.1991.10484804) and **HS2 Campolongo, Cariboni
+& Saltelli 2007** (*Env. Modelling & Software* 22(10):1509–1518, doi:10.1016/j.envsoft.2006.10.004)
+— **both verified against Crossref this session**, both canonical and previously missing while five
+now-out-of-scope NSGA-II entries were present. HS2 matters practically: report **µ\***, the mean of
+the *absolute* elementary effects, not µ, or effects of opposite sign cancel and hide an influential
+factor. The NSGA-II entries H1–H5 are **retained and deliberately not renumbered** — the committed
+`results/sources_doi_*` artifacts cite those IDs — and are relabelled as method context for the
+future-work lane. §I (MENA / Southern Africa) promoted from post-defence to core scope. Tally 51 → 53.
+
+**Files updated:** `MASTER_PLAN.md` (§1 objectives + what the revision changes, §2 critical path,
+§3 decision-vector role, §7 the three-stage method, §9, §10 blockers, §11 reordered, §12),
+`README.md`, `CLAUDE.md` (§0.1 new, §4.14, §4.16 new, §5, run instructions), `DECISIONS.md` (**D5**
+new; D1/D3/D4 annotated), `PROPERTIES.md` (α row + why α is derived; d_p action), `VALIDATION.md`
+(gate header), `THESIS_SYNTHESIS.md` (§1, §2, §10, §11, §12, §13, §14, §15, §16, §17),
+`SOURCES.md`, `scripts/nanofluid_properties.py`, `scripts/htf_sam_bridge.py` (stale optimiser
+wording), `scripts/report_htf_properties.py` (new).
+
+⚠ **Earlier entries in this log were deliberately NOT rewritten.** Entries dated 2026-08-12/13
+argue for case F on the grounds that "the downstream work is exergy analysis and MOO". That
+reasoning was correct when written and its *conclusion* survives the rescope unchanged — a sweep
+exercises off-design state points exactly as an optimiser would, in fact more visibly, since it
+reports every point it visits. This file is **append-only**; the correction belongs here, not in
+history.
+
+⚠ **The repository directory is still named `moo-nehtf-sco2-brayton-cycle`.** The `moo-` prefix is
+now historical. It was **not** renamed: every absolute path in `CLAUDE.md` would break, and the
+rename is the user's call. Flagged in `CLAUDE.md`, `MASTER_PLAN.md` and `README.md`.
+
+**Next.** (a) Re-download the Upington TMY. (b) Decide the `d_p` representation and record it in
+`DECISIONS.md`. (c) Partition the decision vector by map-rebuild cost, then design the sweep grid
+against that partition — **including the φ = 0 twins and the second site** — before launching
+anything. (d) Wire the exergy layer into the integrated model *before* the campaign, since Ė_D is
+one of the metrics mapped over the envelope and retrofitting it means re-running every point.
+
+---
+
+## 2026-08-19 — Session H — Southern Africa TMY supplied; Session G work committed
+
+**The blocker is closed by data, not by work.** The user supplied the Southern Africa weather file
+(identified as the Redstone CSP site), which had been the hard blocker on Objective 5 since the
+2026-08-15 rescope. It is now `data/tmy/1292737_-28.27_23.38_tmy-2022.csv`.
+
+**Verified before recording it as closed** — the file was inspected, not merely observed to exist:
+
+| check | Morocco (in hand since Session D) | Southern Africa (new) |
+|---|---|---|
+| source / version | NSRDB v4.0.1 | NSRDB **v4.0.1 — same** |
+| location id | 158192 | 1292737 |
+| lat, lon | 31.05, −6.86 | **−28.27, 23.38** |
+| elevation | 1260 m | **1590 m** |
+| time zone | **UTC+0** | **UTC+2** |
+| data rows | 8760 | **8760** |
+| column layout | 28 fields | **identical, same order** |
+
+Two things follow. (1) **The site is the one that was specified, not a substitute** — §10 named
+lat −28.29, lon 23.37, and the supplied cell is **0.02° (~2.4 km)** away, the same NSRDB
+neighbourhood. (2) **Both sites read through one code path**, since format, version, column set and
+row count all match, so the Objective-5 replication needs no per-site branching.
+
+⚠ **The one real difference is the timezone (+0 vs +2).** SAM reads the offset from the file header
+so no handling is required — but a hard-coded timezone anywhere, or any raw hour-by-hour comparison
+between the two sites that does not first align on solar time, would be silently wrong. Annual and
+monthly aggregates, which is what the envelope reports, are unaffected. Recorded in `CLAUDE.md` §5.
+
+`data/tmy/` is gitignored, so the file itself is **not committed** — same status as the Morocco
+file. It is on disk for every session on this machine; a fresh machine re-downloads both.
+
+**Session G's work is now committed and pushed.** It had been left entirely in the working tree:
+`scripts/nanofluid_properties.py` (the α addition), `scripts/report_htf_properties.py` (new), the
+`results/htf_properties_*` and `results/dostal_*` artifacts, and the Session G log entry itself.
+Only the *documentation* realignment had been committed (`512608d`), and even that was unpushed —
+`origin/main` was two sessions behind.
+
+**Re-verified before committing rather than trusting the log:**
+
+- `scripts/nanofluid_properties.py` → `validate()` **passed**; the α round-trip reproduces
+  +11.67 / +20.20 / +42.74 % against Han's +10.95 / +18.98 / +37.23 % exactly as logged.
+- `scripts/report_htf_properties.py` → exit 0, and its output is **byte-identical** to the
+  2026-08-15 CSV; the .md differs only in the timestamp and commit stamp. The duplicate re-run was
+  deleted rather than committed — the 2026-08-15 pair is the one `PROGRESS_LOG` references.
+
+**Knowledge files updated for the TMY** — the blocker was asserted in six files, and leaving them
+would have published a stale blocker: `CLAUDE.md` (§0.1 now names **one** remaining blocker, §5
+rewritten as a two-site table with the timezone caveat), `MASTER_PLAN.md` (§2 diagram, §7 Stage 3,
+§10 item closed, §11 item 3), `DECISIONS.md` (D5 consequence 4 annotated — **kept, not deleted**,
+because the lesson stands for `d_p`), `SOURCES.md` (§I preamble), `THESIS_SYNTHESIS.md`
+(Objective-5 status row, §gap 21, next-steps, scope-completion list).
+
+**`d_p` is now the only blocker on the critical path.** Its three options are unchanged
+(`MASTER_PLAN.md` §10) and the choice still has to be recorded in `DECISIONS.md` before any
+particle-size sweep. One thing worth noting for whoever takes it: **`SOURCES.md` B1 (Han 2022),
+which every enhancement fit is anchored to, does not record a particle size in its extracted key
+numbers.** Option (a) — an analogue-grounded size correction from Wei/B5 — needs a reference
+diameter to anchor the correction *at*, so that number must be pulled from the paper before (a) can
+be specified, not during implementation.
+
+⚠ **Naming hazard found while reading the module, not fixed here.** `scripts/nanofluid_properties.py`
+uses its own local source labels that **collide with `SOURCES.md`'s IDs and mean different papers**:
+the module calls Han 2022 **"B3"** (line 50) and Shin & Banerjee **"B1"** (line 52), whereas in
+`SOURCES.md` **B1 is Han 2022** and **B3 is Wang et al. 2023**. The module states the DOI next to
+its labels so it is internally unambiguous and **no number is affected**, but a cross-reference read
+in either direction lands on the wrong paper. Left alone deliberately — a rename touches ~20
+comment sites in a validated module and belongs in its own commit, not one about weather data.
+
+**Next.** Unchanged except that (a) is done. (b) Decide the `d_p` representation and record it in
+`DECISIONS.md` — pull Han's particle size first. (c) Partition the decision vector by map-rebuild
+cost, then design the sweep grid — **now with both sites in view**, so the Objective-5 replication
+reuses the campaign. (d) Wire the exergy layer into the integrated model before the campaign starts.

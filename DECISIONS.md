@@ -212,7 +212,11 @@ retain, do not delete, the MOO-related literature and reasoning as method contex
    required property model, and was only ever an internal intermediate. Both are logged in
    `MASTER_PLAN.md` §10; α is now closed, `d_p` is not.
 4. **A missing data file became a blocker.** The Southern Africa (Upington) TMY was a post-defence
-   footnote; Objective 5 cannot start without it.
+   footnote; Objective 5 cannot start without it. ✅ **Resolved 2026-08-19** — the user supplied
+   `data/tmy/1292737_-28.27_23.38_tmy-2022.csv` (Northern Cape / Redstone corridor, 0.02° from the
+   specified coordinates). Kept in this record because the *lesson* stands: under the revised
+   objectives an absent input file is a scope blocker, not a footnote, and the remaining one
+   (`d_p`) is of the same kind.
 5. **Range declarations now carry the weight gradients used to.** An optimiser that meets a bad
    bound simply avoids that corner; a sweep *reports across the whole range*, so an indefensible
    bound corrupts the published surface. Every range in `MASTER_PLAN.md` §3 needs a stated basis.

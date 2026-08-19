@@ -1512,7 +1512,7 @@ old objective set, is superseded; the underlying evidence is unchanged.)*
 | **2** | Integrated CSP–nano-HTF–TES–sCO₂ model + energy/exergy/hydraulic/economic assessment | **✅ Attained at the model level, with an annual result** | Power block validated node-wise; exergy method verified; HTF↔plant coupling verified; field/TES baseline pinned; hydraulic assessment delivered as the ΔT–pumping law **and independently cross-validated to 0.3 % by the integrated run**; UDPC map generates at the validated design; **integrated annual result 440.21 GWh, nameplate 62.6 MW (§9.5)** | Map is coarse (3 pts/axis) at ~35 min per build; exergy layer still cycle-only (no receiver/TES/tank terms); economic assessment limited to what `Singleowner` returns; no LCOE study |
 | **3** | Decoupled validation + Morris screening + full-range parametric sweeps → response surfaces | **◐ One of three parts attained** | **Decoupled validation: ✅ done and named as the requirement** (§5, §8; `DECISIONS.md` D4). Screening: method selected and justified with canonical references (`SOURCES.md` HS1/HS2); every response functional is computable (η, Ė_D, W_pump, ρ_TES) | **Screening not run** — gated by map build cost, which requires partitioning the vector into cycle-design variables (rebuild, ~35 min) and plant variables (reuse, ~30 s). **Sweeps not run**, and `d_p` cannot be swept meaningfully until §11's gap is closed |
 | **4** | Full parametric envelope; nano-vs-base benefit as a **continuous function** of the varied parameters | **◐ Pre-empted at six points, not as a function** | A six-point comparison shows the interior loading optimum and quantifies nano vs bare vs nitrate (§7.5); the integrated run adds an sCO₂-vs-steam comparison at +13.05 % (§9.5) | Point comparisons, not a surface. **Requires a φ = 0 base-salt twin at every swept point** — the single largest cost consequence of the revision. **No longer post-defence scope** |
-| **5** | Robustness of the parametric maps across MENA and Southern African climates | **◐ Infrastructure, one site of two** | Morocco/Ouarzazate TMY in hand and **already used for every HTF-bridge run and the integrated annual run** | Southern Africa (Upington) TMY **missing — now a hard blocker**, since this objective is no longer deferred. Re-download before designing the sweep grid so the replication reuses it |
+| **5** | Robustness of the parametric maps across MENA and Southern African climates | **◐ Infrastructure only — both sites' data now in hand** | Morocco/Ouarzazate TMY **already used for every HTF-bridge run and the integrated annual run**; Northern Cape / Redstone TMY added 2026-08-19, same NSRDB v4.0.1 format | No replication has been *run* at the second site. The objective is unblocked on data and now waits only on the Stage-2 campaign it replicates |
 
 **The honest one-sentence summary for the viva:** *Objective 1 is met, including the thermal
 diffusivity the revised wording added; Objective 2 is met, with all five layers built, joined and
@@ -1617,8 +1617,9 @@ to a measurement error that this document reports rather than conceals.*
     of the metrics mapped over the envelope; retrofitting it means re-running the campaign.
 21. **Objectives 4 and 5 were scoped in on 2026-08-15 and have no delivered work.** They were
     post-defence under the previous objective set, so the absence is a change of requirement rather
-    than a slipped commitment — but it is an absence, and the Southern Africa TMY needed by
-    Objective 5 is not even on this machine (`MASTER_PLAN.md` §10).
+    than a slipped commitment — but it is an absence. The data gap that accompanied it is closed:
+    the Southern Africa TMY arrived 2026-08-19, so Objective 5 now lacks only the campaign it
+    would replicate (`MASTER_PLAN.md` §10).
 
 ---
 
@@ -1853,9 +1854,9 @@ overstates its own domain.
    - ⚠️ **`d_p`** — pick option (a)/(b)/(c) of §11 and record it in `DECISIONS.md`. **Do not run a
      particle-size sweep before this**: a size-blind model returns a flat surface that reads as a
      physical finding and is not one.
-   - ⚠️ **Southern Africa (Upington) TMY** — re-download. Objective 5 cannot start without it, and
-     doing it *before* the sweep grid is designed lets the climate replication reuse the campaign
-     rather than repeat it.
+   - ✅ **Southern Africa TMY** — supplied 2026-08-19 (Northern Cape / Redstone corridor). It
+     landed *before* the sweep grid was designed, which is what lets the climate replication reuse
+     the campaign rather than repeat it — so design the grid with both sites in view.
 4. **Partition the decision vector by build cost before designing the Morris experiment.** This
    now sets the shape of the whole sweep campaign. SM and t_TES (#1, #2) do not touch the power
    block — they need only a tower run (~20–40 s) against an existing map. The six cycle variables
@@ -1903,8 +1904,8 @@ decision vector — no longer "future work" but a prerequisite of Objective 3** 
 denser cp loadings (≥ 4) to justify committing to a smooth fit.
 
 **Scope completion:** LCOE assessment, now a reported metric of the envelope rather than an
-optimisation objective; the Southern Africa (Upington) TMY re-download, now blocking rather than
-deferred.
+optimisation objective. *(The Southern Africa TMY was listed here as a blocking scope item; it was
+supplied 2026-08-19 and is no longer outstanding.)*
 
 **Genuinely beyond this thesis** *(the post-graduate lane the supervisor's 2026-08-15 rescope
 created, `DECISIONS.md` D5)*: **multi-objective optimisation** — NSGA-II/III over the screened
