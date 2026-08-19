@@ -229,6 +229,30 @@ circularity as Dyreby, since Neises wrote the ssc module.
 
 ## B. NANO-HTF PROPERTY LITERATURE (CuO in chloride eutectics)
 
+### B0. Wang et al. 2021 — THE BASE SALT ITSELF (the φ = 0 endpoint)  [W]
+Wang, J.W., Rincon, J.D., Li, P., Zhao, D., Vidal, J. (2021). "Thermophysical Properties
+Experimentally Tested for NaCl-KCl-MgCl₂ Eutectic Molten Salt as a Next-Generation
+High-Temperature Heat Transfer Fluid in Concentrated Solar Power Systems."
+*J. Solar Energy Engineering* 143(4):041005. (NREL)
+- **DOI:** 10.1115/1.4049253  *[DOI verified 2026-08-19 — Crossref]*
+- **System:** the **base ternary chloride eutectic** — no nanoparticles. Measured ρ, c_p, k, μ
+  with 95 % uncertainties; **Table 9** carries the correlations.
+- **Key numbers:** validity **450–700 °C** (authors endorse extrapolation to 800 °C); melting
+  point **401.4 ± 1.3 °C**; 95 % uncertainties ρ ±15.27 kg/m³, c_p ±0.0358 J/(g·K),
+  k ±0.037 W/(m·K), μ ±0.1138 cP.
+- **Use:** **every φ = 0 number in the property module comes from here** — the base-salt
+  correlations, the uncertainty bands each property's Prop() band is built on, and the
+  melting point used as the cold-tank floor constraint. It is also the φ = 0 control that
+  Objective 4's benefit envelope is differenced against.
+- ⚠ **Added 2026-08-19.** This source was previously cited only inside
+  `scripts/nanofluid_properties.py` (as local label "A1") and `PROPERTIES.md`, and had **no
+  `SOURCES.md` entry at all** — so it was the one pivotal source the §J1 Crossref sweep never
+  checked, despite being the foundation of the entire φ = 0 endpoint. Now verified.
+  ⚠ Was mis-attributed as "Xu/Wang 2021" in `PROPERTIES.md` and in both property scripts;
+  **there is no Xu on the author list** — Xu is a different base-salt MD source (C3/C4).
+  Corrected 2026-08-19 in the live files. Pre-2026-08-19 artifacts under `results/` still carry
+  the old attribution and are left unaltered, being timestamped records.
+
 ### B1. Han et al. 2022 — PRIMARY, exact system  [C→W]
 Han, D., Guene Lougou, B., Shuai, Y., Wang, W., Jiang, B., Shagdar, E. (2022). "Study of
 thermophysical properties of chloride salts doped with CuO nanoparticles for solar thermal
@@ -288,6 +312,36 @@ and Heat Transfer Performance of Ternary Chloride Eutectic Salt by Doping MgO Na
   particle size.
 - **Use:** strongest experimental c_p-enhancement + particle-size + thermal-stability evidence;
   supports interfacial-layer mechanism and the loading/size design space.
+
+### B6. Tiznobaik & Shin 2013 — PARTICLE-SIZE EVIDENCE; the basis of D6  [W]
+Tiznobaik, H., Shin, D. (2013). "Enhanced specific heat capacity of high-temperature molten
+salt-based nanofluids." *Int. J. Heat and Mass Transfer* 57(2):542–548.
+- **DOI:** 10.1016/j.ijheatmasstransfer.2012.10.062  *[DOI verified 2026-08-19 — Crossref]*
+- **Category:** nano-enhanced molten salt c_p; **the only study that varies nanoparticle
+  DIAMETER directly.**
+- **System:** SiO₂ in a binary **carbonate** eutectic (Li₂CO₃–K₂CO₃), 1 wt%, 150–550 °C, at
+  **four diameters: 5, 10, 30, 60 nm.**
+- **Key numbers:** c_p enhancement **24 % (5 nm) / 26 % (10 nm) / 23 % (30 nm) / 26 % (60 nm)**
+  — **no trend across a 12× diameter range**, with a spread (±1.5 pp about a 24.75 % mean,
+  i.e. ±6.1 % relative) smaller than the scatter.
+- **Why pivotal (pre-2020, unavoidable):** it is the *only* direct size-resolved measurement in
+  a molten-salt nanofluid. A 1/d_p surface-area law would have predicted a 12× swing here; the
+  measurement excludes it. Shin's own group later attributed the enhancement to a percolating
+  salt nanostructure whose length scale is set by the salt's self-assembly rather than the
+  particle (Shin, Tiznobaik & Banerjee 2014, *Appl. Phys. Lett.* 104, doi:10.1063/1.4868254;
+  Tiznobaik, Banerjee & Shin 2015, *IJHMT* 91:342–346,
+  doi:10.1016/j.ijheatmasstransfer.2015.05.072) — so size-independence is the mechanistically
+  expected result, not an anomaly.
+- **Use:** the evidence base for **`DECISIONS.md` D6** — the declared size-invariant nominal, the
+  5–60 nm validity band, and the 6.1 % `E_DP_REL_UNC` size-transfer uncertainty.
+- ⚠ **Analogue, and declared as one:** different particle (SiO₂) and different salt family
+  (carbonate, not chloride). It is used for the **shape of the size dependence (none), never for
+  a magnitude** — the same footing D4 stands on. **Countervailing evidence: B5** reports c_p
+  *falling* with larger particle size in a ternary chloride; direction only, no transferable
+  magnitude. D6 records that disagreement rather than resolving it.
+- ⚠ **Scope of the claim:** this is a **specific-heat** result. **No molten-salt study resolves
+  thermal conductivity against diameter**, so k's size-invariance in the module is an extension
+  rather than a transcription — see D6's stated weaknesses.
 
 ---
 

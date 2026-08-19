@@ -44,17 +44,29 @@ Objective 1 named thermal diffusivity explicitly; the quantity was already insid
 this module as the input Han's k was back-derived from, but was not an output.
 
 COMMITTED SYSTEM (locked):
-  Base fluid   : NaCl-KCl-MgCl2 ternary chloride eutectic   ......... "A1"
+  Base fluid   : NaCl-KCl-MgCl2 ternary chloride eutectic   ......... "B0"
+                 Wang, Rincon, Li, Zhao & Vidal, J. Sol. Energy Eng.
+                 143(4) (2021) 041005; doi:10.1115/1.4049253
   Nanoparticle : CuO
   cp / k anchor: Han et al., Sol. Energy Mater. Sol. Cells 234 (2022) 111432
-                 doi:10.1016/j.solmat.2021.111432 ................... "B3"
+                 doi:10.1016/j.solmat.2021.111432 ................... "B1"
                  SAME base salt; series at 0.2 / 0.7 / 2.0 wt%.
-  Mechanism    : Shin & Banerjee, IJHMT 54 (2011) 1064-1070 ......... "B1"
+  Mechanism    : Shin & Banerjee, IJHMT 54 (2011) 1064-1070 ......... "D4"
                  doi:10.1016/j.ijheatmasstransfer.2010.11.017
-                 SiO2 in a DIFFERENT chloride eutectic -> MECHANISM ONLY,
+                 SiO2 in an alkali-CARBONATE eutectic -> MECHANISM ONLY,
                  never used for magnitudes here.
+  Size evidence: Tiznobaik & Shin, IJHMT 57 (2013) 542-548 .......... "B6"
+                 doi:10.1016/j.ijheatmasstransfer.2012.10.062
+                 SiO2 at 5/10/30/60 nm -> the d_p position (D6), below.
 
-Every property returns a Prop(nominal, lo, hi). Bands combine the A1 base-salt
+  ⚠ THESE LABELS ARE SOURCES.md IDs. They were local and CONFLICTING until
+  2026-08-19: this module used "A1" for the base salt (SOURCES.md A1 is Dyreby's
+  sCO2 cycle paper), "B3" for Han (SOURCES.md B3 is Wang 2023) and "B1" for Shin
+  & Banerjee (SOURCES.md B1 is Han). Every label below now resolves in SOURCES.md.
+  No numeric value changed when they were renamed -- the DOIs beside each label
+  were always correct, only the shorthand pointed at the wrong entry.
+
+Every property returns a Prop(nominal, lo, hi). Bands combine the B0 base-salt
 95% uncertainties with an enhancement-model uncertainty, so a parametric or
 uncertainty sweep can sample within them. All property models are implemented;
 sourcing/citation status for each input is documented next to its definition
@@ -62,12 +74,13 @@ below -- Objective 1 now requires DOCUMENTED PROVENANCE per correlation, so thos
 comments are a deliverable, not annotation. The provenance map lives in
 PROPERTIES.md and the full source entries in SOURCES.md sections B, C and D.
 
-NOT REPRESENTED HERE: particle-size (d_p) dependence. Every enhancement fit is
-anchored to Han/B3's series at a FIXED particle size, so this module is size-blind
-and a d_p sweep would move nothing. The revised Objective 3 names particle size as
-a swept parameter, so this is now a blocking gap rather than a declared exclusion
--- see MASTER_PLAN.md §10 for the three options and do not sweep d_p through this
-module until one of them is implemented and recorded in DECISIONS.md.
+PARTICLE SIZE (d_p) is represented as a DECLARED SIZE-INVARIANT NOMINAL over an
+evidenced diameter band, with a separately-named size-transfer uncertainty. This
+is DECISIONS.md D6, taken 2026-08-19; see the d_p section below for the evidence
+and _check_d_p() for the range guard. In short: the nominal enhancement does not
+move with d_p because the one molten-salt study that varied diameter directly
+(B6, 5->60 nm, a 12x range) measured no trend, not because the dependence was
+forgotten. Passing an out-of-band d_p RAISES rather than silently extrapolating.
 """
 
 from __future__ import annotations
@@ -108,7 +121,7 @@ class Prop:
 # Nanoparticle material constants
 # -----------------------------------------------------------------------------
 # COMMITTED: CuO. rho=6320 kg/m3 is not a free choice -- it is the value implied
-# by Han/B3's own density table (back-solving Table 2 gives 6317 kg/m3), so using
+# by Han/B1's own density table (back-solving Table 2 gives 6317 kg/m3), so using
 # it keeps this module numerically consistent with the anchor paper.
 #
 # cp = 667.1 J/(kg K) is pinned to a primary source: NIST-JANAF Thermochemical
@@ -129,7 +142,7 @@ class Prop:
 # Zhang et al., J. Therm. Anal. Calorim. (2024), doi:10.1007/s10973-024-13445-5,
 # note it is "seldom mentioned" and "impractical to test... directly" with
 # standard instruments, which is why they resorted to an inverse method. Kept as
-# a standard literature range (~20-33 W/m.K; Han/B3 itself quotes 76.51 W/m.K
+# a standard literature range (~20-33 W/m.K; Han/B1 itself quotes 76.51 W/m.K
 # for a different sample). Revisit via a materials handbook (e.g. Touloukian,
 # Thermophysical Properties of Matter) when resources allow. Low priority: k
 # here feeds ONLY the Maxwell FLOOR below (which under-predicts the real,
@@ -147,10 +160,13 @@ CUO = Nanoparticle(name="CuO", rho=6320.0, cp=667.1, k=33.0)
 
 
 # =============================================================================
-# Base fluid: NaCl-KCl-MgCl2 ternary chloride eutectic (A1)
+# Base fluid: NaCl-KCl-MgCl2 ternary chloride eutectic (B0)
 # -----------------------------------------------------------------------------
-# Correlations transcribed from Table 9 of the experimentally-tested A1 property
-# set (Xu/Wang et al., ASME J. Sol. Energy Eng. 143(4):041005, 2021 / NREL).
+# Correlations transcribed from Table 9 of the experimentally-tested B0 property
+# set (Wang, Rincon, Li, Zhao & Vidal, ASME J. Sol. Energy Eng. 143(4):041005,
+# 2021 / NREL; doi:10.1115/1.4049253). NOTE: no 'Xu' on the author list -- this
+# was mis-attributed as "Xu/Wang" until 2026-08-19; Xu is a different base-salt
+# MD source (SOURCES.md C3/C4).
 # T in degrees Celsius. Stated validity 450-700 C; the authors explicitly endorse
 # extrapolation to 800 C. Flag anything above 700 C as author-endorsed
 # extrapolation rather than measurement.
@@ -161,12 +177,12 @@ CUO = Nanoparticle(name="CuO", rho=6320.0, cp=667.1, k=33.0)
 #   The exponent's (T+273.15) is an INTERNAL C->K conversion, so still pass T in
 #   CELSIUS. Do not pre-convert to Kelvin or you will double-count.
 # =============================================================================
-MELTING_POINT_C = 401.4      # A1 Table 9 (+/-1.3). Han/B3 measured 399.7 -> consistent.
+MELTING_POINT_C = 401.4      # B0 Table 9 (+/-1.3). Han/B1 measured 399.7 -> consistent.
                              # Cold-tank floor: require T_cold > this + safety margin.
-T_VALID_MIN_C = 450.0        # A1 stated validity window
+T_VALID_MIN_C = 450.0        # B0 stated validity window
 T_VALID_MAX_C = 700.0        # (extrapolation endorsed by the authors to 800 C)
 
-# A1 Table 9 95% uncertainties, converted to SI.
+# B0 Table 9 95% uncertainties, converted to SI.
 _BASE_U = {
     "rho": 15.27,            # kg/m3
     "cp": 35.8,              # J/(kg K)   (= 0.0358 J/g K)
@@ -176,7 +192,7 @@ _BASE_U = {
 
 
 def base_chloride_properties(T_C: float) -> dict:
-    """A1 base-fluid properties at T_C [deg C], SI units."""
+    """B0 base-fluid properties at T_C [deg C], SI units."""
     return {
         "rho": 1958.8438 - 0.56355 * T_C,                                 # kg/m3
         "cp":  1301.38 - 0.5 * T_C,                                        # J/(kg K)
@@ -186,7 +202,7 @@ def base_chloride_properties(T_C: float) -> dict:
 
 
 def base_chloride_uncertainty() -> dict:
-    """A1 Table 9 95% absolute uncertainties, SI units."""
+    """B0 Table 9 95% absolute uncertainties, SI units."""
     return dict(_BASE_U)
 
 
@@ -194,7 +210,7 @@ def base_chloride_uncertainty() -> dict:
 # Concentration conversion: mass fraction -> volume fraction
 # -----------------------------------------------------------------------------
 # Mixing models need VOLUME fraction; experiments report MASS fraction.
-# NOTE ON THE ANCHOR PAPER: Han/B3's tabulated densities (their Table 2) are
+# NOTE ON THE ANCHOR PAPER: Han/B1's tabulated densities (their Table 2) are
 # reproduced exactly by substituting the MASS fraction into their Eq. (2), which
 # is written for volume fraction (e.g. 0.7 wt%: mass-frac gives 1749.2 kg/m3 vs
 # the tabulated 1749; correct vol-frac gives 1725.8). This module uses the
@@ -214,7 +230,7 @@ def mass_to_volume_fraction(phi_mass: float, np_: Nanoparticle,
 
 
 # =============================================================================
-# ANCHOR DATA -- Han et al. 2022 (B3). Single source of truth for the fits.
+# ANCHOR DATA -- Han et al. 2022 (B1). Single source of truth for the fits.
 # All loadings in wt% (not fraction). Enhancements as fractions of the base.
 # -----------------------------------------------------------------------------
 # cp: LIQUID region 450-550 C (Table 1 / Fig. 9b). This is the cycle's operating
@@ -224,7 +240,7 @@ def mass_to_volume_fraction(phi_mass: float, np_: Nanoparticle,
 #     COMMITTED FIT: piecewise-linear (see cp_enhancement). With only 3 points
 #     the true continuous optimum is UNRESOLVED -- it may lie anywhere in
 #     0.2-2.0 wt%. 0.7 wt% is the best-TESTED loading, not a proven maximum.
-#     (For CuO in A1 the best-tested loading is 0.7 wt%; contrast the nitrate/
+#     (For CuO in B0 the best-tested loading is 0.7 wt%; contrast the nitrate/
 #     SiO2 literature whose best-tested loadings cluster nearer 1 wt%.)
 #
 # k : Han reports the ENDPOINTS only (+15.85% at 0.2, +39.55% at 2.0 wt%;
@@ -244,13 +260,132 @@ HAN_K         = ((0.2, 0.1585), (0.7, 0.3394), (2.0, 0.3955))
 HAN_PHI_MAX_WT = 2.0     # do not extrapolate the fits beyond the measured range
 
 # Enhancement-model uncertainty (RELATIVE, applied to the enhancement E itself,
-# not to the property). Measurement precision in B3 is tight (cp +/-0.001 J/gK,
+# not to the property). Measurement precision in B1 is tight (cp +/-0.001 J/gK,
 # k within 4%), but the real uncertainty is whether Han's curve transfers to a
-# plant fluid (different prep route, particle size, dispersion, ageing). Chloride
-# cp enhancements across the literature span roughly 6-38%, which is what these
+# plant fluid (different prep route, dispersion state, ageing). Chloride cp
+# enhancements across the literature span roughly 6-38%, which is what these
 # defaults reflect. Widen them for a conservative robust run.
+#
+# PARTICLE SIZE used to be listed here as one of the lumped transfer risks. It is
+# no longer: since 2026-08-19 it has its own named term, E_DP_REL_UNC below, so
+# that a d_p sweep can report a size-attributable band instead of hiding it
+# inside a 50% catch-all. Keeping it in both places would double-count it.
 E_CP_REL_UNC = 0.50
 E_K_REL_UNC  = 0.35
+
+
+# =============================================================================
+# PARTICLE SIZE d_p -- DECISIONS.md D6 (2026-08-19)
+# -----------------------------------------------------------------------------
+# THE POSITION: the nominal enhancement is DECLARED SIZE-INVARIANT across an
+# evidenced diameter band; d_p contributes an uncertainty, never a trend.
+#
+# This is MASTER_PLAN.md §10 option (c), but it is NOT the fallback that option
+# was written as. It is the option the evidence selects. The reasoning, because a
+# flat response surface is exactly the thing a reader will suspect of being a bug:
+#
+#  1. Option (b) -- find a size-resolved anchor for CuO in NaCl-KCl-MgCl2 -- was
+#     searched on 2026-08-19 and returned NULL. No study varies particle size for
+#     CuO in any chloride eutectic. (Consistent with C0's headline that the CuO/
+#     chloride corner of the literature is thin generally.)
+#
+#  2. Option (a) -- an analogue size correction normalised to f(d_ref) = 1 at
+#     Han's diameter -- is NOT IMPLEMENTABLE. Han/B1 does not report its CuO
+#     particle size in any accessible form: the paper is paywalled with no open
+#     copy (OpenAlex: is_oa false, no repository full text), its abstract omits
+#     the size, and the reviews that tabulate it omit it too. Without d_ref there
+#     is no anchor point, so a trend correction has nothing to be normalised to.
+#
+#  3. The obvious mechanistic argument for a 1/d_p trend is REFUTED, not merely
+#     unsupported. Specific surface area scales as 6/(rho_p * d_p), so an
+#     interfacial-layer mechanism (D4) naively predicts enhancement ~ 1/d_p --
+#     a 12x swing across 5-60 nm. B6 measured that exact range in a molten salt
+#     and found 24 / 26 / 23 / 26 % at 5 / 10 / 30 / 60 nm: no trend, and a
+#     spread smaller than the scatter. Shin's own group later attributed the
+#     enhancement to a percolating salt nanostructure whose length scale is set
+#     by the salt's self-assembly rather than by the particle -- which is why
+#     size-independence is the mechanistically expected result, not an anomaly.
+#
+#  4. The evidence is NOT unanimous, and the band is where that lives. B5 (MgO in
+#     a different ternary chloride) reports cp FALLING with larger particle size.
+#     One same-property study says flat, one analogue says decreasing. That
+#     disagreement justifies an uncertainty; it does not justify inventing a
+#     nominal trend, which would assert more than either study supports.
+#
+# WHAT THIS BUYS THE SWEEP. Objective 3 names particle size as a swept parameter,
+# so d_p cannot simply be dropped. It is now a real, validated, range-guarded
+# input whose flat nominal is a transcribed experimental result with a citation.
+# That is the difference between a reported null and a manufactured one: the
+# surface is flat because B6 measured it flat, and it carries a thickness.
+#
+# WHAT WOULD OVERTURN IT. A size-resolved cp or k series for CuO (or any oxide)
+# in a ternary chloride. That is one experiment, and D6 should be revisited the
+# day it exists. Note also that B6 measured SPECIFIC HEAT; no molten-salt study
+# resolves THERMAL CONDUCTIVITY against diameter at all, so k's size-invariance
+# is the weaker half of this position -- see conductivity_nf().
+# =============================================================================
+D_P_MIN_NM = 5.0     # B6's smallest tested diameter -- below this, nothing measured
+D_P_MAX_NM = 60.0    # B6's largest tested diameter  -- above this, nothing measured
+
+# Relative uncertainty added to an enhancement when a d_p is ASSERTED. Taken from
+# B6's own measured spread across its 12x diameter range: enhancements of 24, 26,
+# 23, 26 % about a mean of 24.75 %, so a half-range of 1.5 pp -> 1.5/24.75 = 6.1%.
+# This is an OBSERVED size-scatter, not a guessed allowance.
+E_DP_REL_UNC = 0.061
+
+PARTICLE_SIZE_NOTE = (
+    "Particle size d_p is modelled as size-INVARIANT in the nominal over "
+    f"{D_P_MIN_NM:.0f}-{D_P_MAX_NM:.0f} nm, with a +/-{100*E_DP_REL_UNC:.1f}% "
+    "size-transfer uncertainty on the enhancement (DECISIONS.md D6). The band "
+    "edge comes from Tiznobaik & Shin 2013 (B6), the only molten-salt study to "
+    "vary nanoparticle diameter directly: 5/10/30/60 nm SiO2 at 1 wt% in a "
+    "binary carbonate eutectic gave cp enhancements of 24/26/23/26% -- no trend "
+    "over a 12x size range. Han/B1 does not report the diameter its own cp/k "
+    "series was measured at, and the paper is paywalled with no open copy, so "
+    "an anchored size CORRECTION cannot be normalised even in principle; a "
+    "declared invariance needs no anchor, which is why the two facts resolve "
+    "each other. Countervailing evidence: B5 reports cp falling with larger "
+    "particle size for MgO in a different ternary chloride -- direction only, "
+    "no transferable magnitude. The declared range is a CONSTRAINT OF THE "
+    "STUDY: a d_p sweep must not exceed it, exactly as loading must not exceed "
+    f"{HAN_PHI_MAX_WT} wt%."
+)
+
+
+def _check_d_p(d_p_nm: float | None) -> None:
+    """Guard the declared diameter band. None = 'as Han measured it' (unknown).
+
+    Mirrors _warn_if_extrapolating() for loading: refuse rather than extrapolate.
+    A sweep that wants a wider range must widen the EVIDENCE first, not this
+    constant -- outside 5-60 nm no molten-salt study has measured anything.
+    """
+    if d_p_nm is None:
+        return
+    if not (D_P_MIN_NM - 1e-9 <= d_p_nm <= D_P_MAX_NM + 1e-9):
+        raise ValueError(
+            f"particle size {d_p_nm:g} nm is outside the evidenced band "
+            f"({D_P_MIN_NM:g}-{D_P_MAX_NM:g} nm, Tiznobaik & Shin 2013/B6). "
+            f"Constrain the d_p sweep range instead of extrapolating a "
+            f"size-invariance claim into diameters nobody has measured."
+        )
+
+
+def size_transfer_uncertainty(d_p_nm: float | None) -> float:
+    """Relative uncertainty contributed by asserting a particle size [fraction].
+
+    Returns 0.0 for d_p_nm=None. That is not a special case for convenience: it
+    is the statement 'this is Han's fluid at Han's (unrecorded) diameter', which
+    incurs no size-TRANSFER penalty because no transfer is being claimed. Naming
+    any diameter asserts a fluid different from the one measured, and that
+    assertion costs E_DP_REL_UNC.
+    """
+    _check_d_p(d_p_nm)
+    return 0.0 if d_p_nm is None else E_DP_REL_UNC
+
+
+def _combine_rel(*rels: float) -> float:
+    """Combine independent relative uncertainties in quadrature."""
+    return math.sqrt(sum(r * r for r in rels))
 
 
 # =============================================================================
@@ -328,7 +463,7 @@ _K_SAT = _fit_saturating(HAN_K)
 # Enhancement models
 # =============================================================================
 def cp_enhancement(phi_mass_wt: float, model: str = "linear") -> float:
-    """cp enhancement E(phi) [fraction] for CuO in A1, LIQUID phase.
+    """cp enhancement E(phi) [fraction] for CuO in B0, LIQUID phase.
 
     COMMITTED DEFAULT: model="linear" (piecewise-linear through Han's points).
     Rationale: with only 3 measured points, no fit can distinguish curve shapes,
@@ -356,7 +491,7 @@ def cp_enhancement(phi_mass_wt: float, model: str = "linear") -> float:
 
 
 def k_enhancement(phi_mass_wt: float, model: str = "saturating") -> float:
-    """k enhancement E_k(phi) [fraction] for CuO in A1. Monotonic, saturating."""
+    """k enhancement E_k(phi) [fraction] for CuO in B0. Monotonic, saturating."""
     if phi_mass_wt < 0:
         raise ValueError("loading must be >= 0")
     if model == "saturating":
@@ -395,7 +530,7 @@ def mu_brinkman_floor(phi_v: float, base: dict) -> float:
 def density_nf(phi_v: float, base: dict, np_: Nanoparticle) -> Prop:
     """Nanofluid density [kg/m3]: volume-weighted mixing rule (uncontested).
 
-    Band = A1 base-salt 95% uncertainty (+/-15.27 kg/m3) scaled by the salt's
+    Band = B0 base-salt 95% uncertainty (+/-15.27 kg/m3) scaled by the salt's
     volume share; the particle contribution is essentially exact.
     """
     rho = phi_v * np_.rho + (1.0 - phi_v) * base["rho"]
@@ -404,23 +539,29 @@ def density_nf(phi_v: float, base: dict, np_: Nanoparticle) -> Prop:
 
 
 def cp_nf(phi_mass: float, base: dict, np_: Nanoparticle,
-          model: str = "linear") -> Prop:
-    """Nanofluid specific heat [J/(kg K)]. Anchor: Han/B3 liquid-phase series.
+          model: str = "linear", d_p_nm: float | None = None) -> Prop:
+    """Nanofluid specific heat [J/(kg K)]. Anchor: Han/B1 liquid-phase series.
 
     NOT a mixing rule. The classical mass-weighted rule predicts a DECREASE and
-    is contradicted by measurement (B1 Fig. 2 shows the thermal-equilibrium model
+    is contradicted by measurement (D4 Fig. 2 shows the thermal-equilibrium model
     predicting ~0 change against a measured +14.5%). Modelled instead as
     cp_nf = cp_base(T) * (1 + E(phi)), with E from Han's LIQUID-phase data.
 
-    Band: A1 base cp uncertainty combined with E_CP_REL_UNC on the enhancement.
+    Band: B0 base cp uncertainty combined with E_CP_REL_UNC on the enhancement,
+    plus the d_p size-transfer term in quadrature when a diameter is asserted.
+
+    d_p_nm does NOT move the nominal -- see the D6 block above. This is the
+    property the size-invariance evidence (B6) actually measured, so cp is the
+    strong half of that position.
     """
     _warn_if_extrapolating(phi_mass)
     E = cp_enhancement(phi_mass * 100.0, model=model)
+    rel = _combine_rel(E_CP_REL_UNC, size_transfer_uncertainty(d_p_nm))
     cp_b = base["cp"]
     u_b = _BASE_U["cp"]
     nominal = cp_b * (1.0 + E)
-    lo = (cp_b - u_b) * (1.0 + E * (1.0 - E_CP_REL_UNC))
-    hi = (cp_b + u_b) * (1.0 + E * (1.0 + E_CP_REL_UNC))
+    lo = (cp_b - u_b) * (1.0 + E * (1.0 - rel))
+    hi = (cp_b + u_b) * (1.0 + E * (1.0 + rel))
     if E < 0:      # above the optimum the enhancement is a penalty: keep lo<hi
         lo, hi = min(lo, hi), max(lo, hi)
     return Prop(nominal, lo, hi)
@@ -428,22 +569,33 @@ def cp_nf(phi_mass: float, base: dict, np_: Nanoparticle,
 
 def conductivity_nf(phi_mass: float, base: dict, np_: Nanoparticle,
                     phi_v: float | None = None,
-                    model: str = "saturating") -> Prop:
-    """Nanofluid thermal conductivity [W/(m K)]. Anchor: Han/B3 measured k.
+                    model: str = "saturating",
+                    d_p_nm: float | None = None) -> Prop:
+    """Nanofluid thermal conductivity [W/(m K)]. Anchor: Han/B1 measured k.
 
     Nominal from the measured enhancement; LOWER band edge floored at the Maxwell
     prediction (theory) so the band spans "theory only" to "measurement plus
     scatter". The lower edge also absorbs the density-convention offset described
     in mass_to_volume_fraction() (Han's k is inflated by ~0.4-3.8% because their
     tabulated rho used the mass fraction).
+
+    ⚠ d_p is treated exactly as in cp_nf(), but the evidence behind it is WEAKER
+    for k: B6 varied diameter against SPECIFIC HEAT, and no molten-salt study
+    resolves thermal conductivity against diameter at all. The size-invariant
+    nominal is therefore an EXTENSION here, not a transcription. It is still the
+    defensible choice -- Maxwell, the only theory available for k, is itself a
+    function of phi_v alone and cannot produce a size trend either -- but D6
+    flags k as the half of the position to revisit first if size-resolved k data
+    ever appears. E_K_REL_UNC (0.35) is wide enough to absorb the difference.
     """
     _warn_if_extrapolating(phi_mass)
     E = k_enhancement(phi_mass * 100.0, model=model)
+    rel = _combine_rel(E_K_REL_UNC, size_transfer_uncertainty(d_p_nm))
     k_b = base["k"]
     u_b = _BASE_U["k"]
     nominal = k_b * (1.0 + E)
-    lo = (k_b - u_b) * (1.0 + E * (1.0 - E_K_REL_UNC))
-    hi = (k_b + u_b) * (1.0 + E * (1.0 + E_K_REL_UNC))
+    lo = (k_b - u_b) * (1.0 + E * (1.0 - rel))
+    hi = (k_b + u_b) * (1.0 + E * (1.0 + rel))
     if phi_v is not None:                       # never fall below theory
         lo = max(lo, k_maxwell_floor(phi_v, base, np_) - u_b)
     return Prop(nominal, lo, hi)
@@ -453,7 +605,7 @@ def conductivity_nf(phi_mass: float, base: dict, np_: Nanoparticle,
 #
 # GROUNDING (chloride-FAMILY MD analogues, replacing the earlier nitrate-based
 # guess). None of these are same-salt+same-particle (that data does not exist
-# for CuO/A1 -- see VISCOSITY_GAP_NOTE below), but they are same-CHEMISTRY
+# for CuO/B0 -- see VISCOSITY_GAP_NOTE below), but they are same-CHEMISTRY
 # (chloride) MD simulations, which is a strictly better analogue basis than
 # borrowing from nitrate systems:
 #
@@ -476,13 +628,13 @@ MU_HI_PER_WT = 0.386      # +38.6% per 1 wt% (Al2O3/NaCl-KCl MD, upper value)
 
 VISCOSITY_GAP_NOTE = (
     "No published viscosity measurement or simulation exists for CuO in the "
-    "A1 (NaCl-KCl-MgCl2) ternary specifically. The band above is grounded in "
+    "B0 (NaCl-KCl-MgCl2) ternary specifically. The band above is grounded in "
     "chloride-FAMILY MD (different salt/particle pairs), which is a stronger "
     "analogue than the nitrate cross-chemistry data used in an earlier "
     "revision of this module, but it remains an analogue, not a measurement "
     "of this system. If reviewers push on this gap, the next step is "
-    "dedicated MD (Green-Kubo or NEMD) on CuO/A1 specifically, validated "
-    "first against Han/B3's measured cp and k so the force field is trusted "
+    "dedicated MD (Green-Kubo or NEMD) on CuO/B0 specifically, validated "
+    "first against Han/B1's measured cp and k so the force field is trusted "
     "before extending it to predict viscosity."
 )
 
@@ -491,8 +643,8 @@ def viscosity_nf(phi_v: float, base: dict, np_: Nanoparticle,
                  phi_mass: float = 0.0) -> Prop:
     """Nanofluid dynamic viscosity [Pa s]. THE WEAKEST INPUT IN THIS MODULE.
 
-    Han/B3 does NOT measure viscosity, and there is no same-salt, same-particle
-    measured mu for CuO in A1 anywhere in the literature -- see
+    Han/B1 does NOT measure viscosity, and there is no same-salt, same-particle
+    measured mu for CuO in B0 anywhere in the literature -- see
     VISCOSITY_GAP_NOTE. The band is constructed from analogues, not fitted:
 
       lo      : Brinkman (dilute rigid spheres). Supported by reports of molten-
@@ -507,7 +659,7 @@ def viscosity_nf(phi_v: float, base: dict, np_: Nanoparticle,
     These replace an earlier, more pessimistic nitrate-analogue band: chloride-
     family MD gives materially smaller viscosity penalties than the nitrate
     cross-chemistry scatter previously used here. Still an ANALOGUE basis
-    (different salt and/or particle from CuO/A1), not a measurement of this
+    (different salt and/or particle from CuO/B0), not a measurement of this
     exact system -- declare this explicitly as a limitation. Treat mu as the
     property most in need of dedicated MD or measurement if pushed further.
 
@@ -531,7 +683,7 @@ def viscosity_nf(phi_v: float, base: dict, np_: Nanoparticle,
 # -----------------------------------------------------------------------------
 # ADDED 2026-08-15 (Session G). The revised Objective 1 names thermal diffusivity
 # as one of the five required property models (MASTER_PLAN.md §1). It was already
-# present in this module as an INPUT -- Han/B3's measured diffusivity ratios are
+# present in this module as an INPUT -- Han/B1's measured diffusivity ratios are
 # what k was derived from (see the HAN_K comment above) -- but was never an
 # OUTPUT. This closes that gap.
 #
@@ -563,11 +715,11 @@ def viscosity_nf(phi_v: float, base: dict, np_: Nanoparticle,
 # against the observed 4.01%. Nothing is unexplained. The 5% check ceiling is set
 # just above this so a genuine drift trips it while the known offset does not.
 # =============================================================================
-HAN_ALPHA = ((0.2, 0.1095), (0.7, 0.1898), (2.0, 0.3723))   # Han/B3 Sec. 3.4
+HAN_ALPHA = ((0.2, 0.1095), (0.7, 0.1898), (2.0, 0.3723))   # Han/B1 Sec. 3.4
 
 
 def alpha_enhancement_han(phi_mass_wt: float) -> float:
-    """Han/B3's MEASURED diffusivity enhancement [fraction]. Cross-check only.
+    """Han/B1's MEASURED diffusivity enhancement [fraction]. Cross-check only.
 
     Do NOT use this to build alpha -- use diffusivity_nf(), which derives alpha
     from k, rho and cp so it cannot drift out of consistency with them. This
@@ -637,19 +789,34 @@ def _warn_if_extrapolating(phi_mass: float) -> None:
 def nanofluid_properties(phi_mass: float, T_C: float,
                          np_: Nanoparticle = CUO,
                          cp_model: str = "linear",
-                         k_model: str = "saturating") -> dict:
+                         k_model: str = "saturating",
+                         d_p_nm: float | None = None) -> dict:
     """Return {rho, cp, k, alpha, mu} as Prop objects at (phi_mass, T_C [deg C]).
 
     'alpha' (thermal diffusivity, m2/s) is DERIVED from the other three, not
     independently correlated -- see diffusivity_nf(). It was added 2026-08-15 when
     the revised Objective 1 named it explicitly; every existing caller that reads
     the dict by key is unaffected by the extra entry.
+
+    d_p_nm [nm] is the swept particle size named by Objective 3. It is validated
+    against the evidenced band and widens the cp and k bands; it does NOT move any
+    nominal, by decision D6 and on B6's evidence -- read the d_p block above
+    before reporting a flat d_p response surface, because the flatness is the
+    finding and its provenance is what makes it one. Leave it None to mean "Han's
+    fluid at Han's own (unrecorded) diameter", which reproduces every number this
+    module produced before 2026-08-19 exactly.
+
+    NOTE rho and mu take no d_p at all. That is not an omission: the mixing rule
+    and Brinkman are functions of phi_v alone, and a length scale cannot enter
+    either without changing the physics they encode.
     """
+    _check_d_p(d_p_nm)
     base = base_chloride_properties(T_C)
     phi_v = mass_to_volume_fraction(phi_mass, np_, base["rho"])
     rho = density_nf(phi_v, base, np_)
-    cp = cp_nf(phi_mass, base, np_, model=cp_model)
-    k = conductivity_nf(phi_mass, base, np_, phi_v=phi_v, model=k_model)
+    cp = cp_nf(phi_mass, base, np_, model=cp_model, d_p_nm=d_p_nm)
+    k = conductivity_nf(phi_mass, base, np_, phi_v=phi_v, model=k_model,
+                        d_p_nm=d_p_nm)
     return {
         "rho": rho,
         "cp":  cp,
@@ -737,7 +904,7 @@ def write_sam_htf_table(phi_mass: float, T_grid_C: Sequence[float], path: str,
 # Self-validation
 # =============================================================================
 def validate(verbose: bool = True) -> bool:
-    """Check the fits reproduce Han/B3's measured points. Run this in CI."""
+    """Check the fits reproduce Han/B1's measured points. Run this in CI."""
     ok = True
     for w, e in HAN_CP_LIQUID:
         got = cp_enhancement(w, model="linear")
@@ -768,17 +935,72 @@ def validate(verbose: bool = True) -> bool:
                   f"Han {100*r['E_han']:+7.2f}%  "
                   f"offset {r['ratio_offset_pct']:+.2f}%  "
                   f"{'OK' if good else 'FAIL'}")
+
+    # -- Particle size d_p (added 2026-08-19, DECISIONS.md D6) ----------------
+    # Four properties of the representation, each one a way it could be wrong:
+    #   1. REGRESSION. d_p=None must reproduce the pre-D6 module bit-for-bit.
+    #      The section 7 baselines and the "identical to every digit" Session E
+    #      reproducibility claim both depend on this, so it is the first test.
+    #   2. The nominal must not move with d_p. That is the whole decision; if it
+    #      ever does, someone has quietly reintroduced a trend.
+    #   3. The band must WIDEN when a diameter is asserted -- otherwise d_p is
+    #      inert and the sweep is back to manufacturing a null.
+    #   4. Out-of-band d_p must RAISE, not extrapolate.
+    T_ref, w_ref = 500.0, 0.7
+    b = base_chloride_properties(T_ref)
+    pv = mass_to_volume_fraction(w_ref / 100.0, CUO, b["rho"])
+
+    cp_none = cp_nf(w_ref / 100.0, b, CUO)
+    E_ref = cp_enhancement(w_ref)
+    lo_pre = (b["cp"] - _BASE_U["cp"]) * (1.0 + E_ref * (1.0 - E_CP_REL_UNC))
+    hi_pre = (b["cp"] + _BASE_U["cp"]) * (1.0 + E_ref * (1.0 + E_CP_REL_UNC))
+    good = abs(cp_none.lo - lo_pre) < 1e-9 and abs(cp_none.hi - hi_pre) < 1e-9
+    ok &= good
+    if verbose:
+        print(f"  d_p none : cp band reproduces pre-D6 exactly          "
+              f"{'OK' if good else 'FAIL'}")
+
+    cp_small = cp_nf(w_ref / 100.0, b, CUO, d_p_nm=D_P_MIN_NM)
+    cp_large = cp_nf(w_ref / 100.0, b, CUO, d_p_nm=D_P_MAX_NM)
+    k_small = conductivity_nf(w_ref / 100.0, b, CUO, phi_v=pv, d_p_nm=D_P_MIN_NM)
+    k_none = conductivity_nf(w_ref / 100.0, b, CUO, phi_v=pv)
+    good = (abs(cp_small.nominal - cp_none.nominal) < 1e-12
+            and abs(cp_large.nominal - cp_none.nominal) < 1e-12
+            and abs(k_small.nominal - k_none.nominal) < 1e-12)
+    ok &= good
+    if verbose:
+        print(f"  d_p flat : nominal invariant {D_P_MIN_NM:.0f}->{D_P_MAX_NM:.0f} nm "
+              f"(the D6 position)     {'OK' if good else 'FAIL'}")
+
+    w_none = cp_none.hi - cp_none.lo
+    w_size = cp_small.hi - cp_small.lo
+    good = w_size > w_none
+    ok &= good
+    if verbose:
+        print(f"  d_p band : widens {100*(w_size/w_none - 1):+.2f}% when a "
+              f"diameter is asserted  {'OK' if good else 'FAIL'}")
+
+    good = False
+    try:
+        nanofluid_properties(w_ref / 100.0, T_ref, d_p_nm=D_P_MAX_NM + 1.0)
+    except ValueError:
+        good = True
+    ok &= good
+    if verbose:
+        print(f"  d_p guard: {D_P_MAX_NM + 1.0:.0f} nm raises rather than "
+              f"extrapolating      {'OK' if good else 'FAIL'}")
+
     return bool(ok)
 
 
 if __name__ == "__main__":
     T = 500.0
     base = base_chloride_properties(T)
-    print(f"A1 base @ {T:.0f} C: rho={base['rho']:.1f} kg/m3  "
+    print(f"B0 base @ {T:.0f} C: rho={base['rho']:.1f} kg/m3  "
           f"cp={base['cp']:.1f} J/kgK  k={base['k']:.4f} W/mK  "
           f"mu={base['mu']*1e3:.3f} mPa.s\n")
 
-    print("Fit validation against Han/B3:")
+    print("Fit validation against Han/B1:")
     print(f"  cubic cp coeffs (a,b,c) = "
           f"({_CP_CUBIC[0]:.4f}, {_CP_CUBIC[1]:.4f}, {_CP_CUBIC[2]:.4f})")
     print(f"  saturating k fit: A={_K_SAT[0]:.4f}, tau={_K_SAT[1]:.4f} wt%")

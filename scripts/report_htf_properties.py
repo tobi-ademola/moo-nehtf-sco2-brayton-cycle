@@ -6,7 +6,7 @@ thermal conductivity, thermal diffusivity, and viscosity) ... with documented pr
 correlation." Two things follow that the project did not previously have on disk:
 
   1. THERMAL DIFFUSIVITY is now a named output. `scripts/nanofluid_properties.py` carried it only
-     as an INPUT -- Han/B3's measured diffusivity ratios are what its k was back-derived from --
+     as an INPUT -- Han/B1's measured diffusivity ratios are what its k was back-derived from --
      and never returned it. That gap is closed (`diffusivity_nf`), and the round-trip
      k -> alpha -> Han must close for the derivation to be self-consistent. This script is where
      that check lands on disk instead of scrolling past in a terminal.
@@ -50,14 +50,14 @@ import nanofluid_properties as nfp  # noqa: E402
 # every swept point, so the phi = 0 column is half of every comparison downstream.
 LOADINGS_WT = (0.0, 0.2, 0.7, 1.0, 2.0)
 
-# Full stated validity window of the A1 correlation set (nanofluid_properties.py).
+# Full stated validity window of the B0 correlation set (nanofluid_properties.py).
 T_GRID_C = (450.0, 500.0, 550.0, 600.0, 650.0, 700.0)
 
 # One row per correlation: (property, symbol, unit, form, primary anchor, status).
 PROVENANCE = (
     ("Density", "rho", "kg/m3", "linear in T; volume-fraction mixing rule",
-     "A1 set Table 9 (Xu/Wang et al., ASME J. Sol. Energy Eng. 143(4):041005, 2021) "
-     "+ CuO rho back-solved from Han/B3 Table 2",
+     "B0 set Table 9 (Wang et al., ASME J. Sol. Energy Eng. 143(4):041005, 2021) "
+     "+ CuO rho back-solved from Han/B1 Table 2",
      "anchored; deliberate volume-fraction divergence from Han disclosed"),
     ("Specific heat", "cp", "J/(kg K)", "linear in T; piecewise-linear in phi",
      "Han et al. 2022, Sol. Energy Mater. Sol. Cells 234:111432 (liquid region, 450-550 C)",
@@ -113,7 +113,7 @@ def main():
     say("| module under report | `scripts/nanofluid_properties.py` |")
     say("| generated (UTC) | %s |" % stamp)
     say("| git commit | `%s` |" % commit)
-    say("| system | CuO in NaCl–KCl–MgCl₂ ternary chloride eutectic (A1) |")
+    say("| system | CuO in NaCl–KCl–MgCl₂ ternary chloride eutectic (B0) |")
     say("| validity | %.0f–%.0f °C stated; ≤ %.1f wt%% (fits not extrapolated beyond Han) |"
         % (nfp.T_VALID_MIN_C, nfp.T_VALID_MAX_C, nfp.HAN_PHI_MAX_WT))
     say("| melting point | %.1f °C — the cold-tank floor constraint |" % nfp.MELTING_POINT_C)
@@ -133,10 +133,8 @@ def main():
     say("> **The viscosity gap, stated rather than buried.** %s"
         % nfp.VISCOSITY_GAP_NOTE.replace("\n", " "))
     say()
-    say("> **Particle size is not represented.** Every enhancement fit is anchored to Han's series "
-        "at a fixed particle size, so this module is size-blind. The revised Objective 3 names "
-        "particle size as a swept parameter, which makes this a blocking gap rather than a "
-        "declared exclusion — see `MASTER_PLAN.md` §10.")
+    say("> **Particle size, stated rather than buried.** %s"
+        % nfp.PARTICLE_SIZE_NOTE.replace("\n", " "))
     say()
 
     # ---------------------------------------------------------------- properties
@@ -190,6 +188,60 @@ def main():
     say("**Module self-validation (cp and k fits + this round-trip): %s**"
         % ("PASSED" if (nfp.validate(verbose=False) and all_ok) else "FAILED"))
     say()
+
+    # ------------------------------------------------------------- particle size
+    say("## 4. Particle size — the declared-invariance position (D6)")
+    say()
+    say("`DECISIONS.md` **D6** (2026-08-19) represents particle size as a *declared "
+        "size-invariant nominal over an evidenced band*, with a named size-transfer "
+        "uncertainty. Objective 3 sweeps d_p, so a reader will meet a flat d_p response "
+        "surface and should be able to check here that the flatness is a transcribed "
+        "measurement and not an unrepresented variable. The table below is that check: "
+        "nominals identical across the band, bands wider than at the unasserted reference.")
+    say()
+    say("| d_p (nm) | cp nominal (J/kg·K) | cp band width | k nominal (W/m·K) | k band width | "
+        "α nominal (10⁻⁷ m²/s) |")
+    say("|---|---|---|---|---|---|")
+    T_dp, phi_dp = 500.0, 0.7
+    ref = nfp.nanofluid_properties(phi_dp / 100.0, T_dp)
+    rows = [(None, ref)]
+    for d in (nfp.D_P_MIN_NM, 10.0, 30.0, nfp.D_P_MAX_NM):
+        rows.append((d, nfp.nanofluid_properties(phi_dp / 100.0, T_dp, d_p_nm=d)))
+    nominals_flat = True
+    for d, p in rows:
+        nominals_flat &= (abs(p["cp"].nominal - ref["cp"].nominal) < 1e-12
+                          and abs(p["k"].nominal - ref["k"].nominal) < 1e-12)
+        say("| %s | %.1f | %.1f | %.4f | %.4f | %.4f |"
+            % ("*unasserted*" if d is None else "%.0f" % d,
+               p["cp"].nominal, p["cp"].hi - p["cp"].lo,
+               p["k"].nominal, p["k"].hi - p["k"].lo,
+               p["alpha"].nominal * 1e7))
+    say()
+    say("Evaluated at %.0f °C and %.1f wt%%. The **nominal columns are constant by decision, "
+        "not by accident**: %s. The *unasserted* row is the module's pre-D6 behaviour — naming "
+        "no diameter means \"Han's fluid at Han's own diameter\", which claims no transfer and "
+        "so carries no transfer penalty."
+        % (T_dp, phi_dp,
+           "verified identical to <1e-12 across the band" if nominals_flat
+           else "**FAILED — a nominal moved with d_p, which contradicts D6**"))
+    say()
+    say("**The honest caveat on magnitude.** The size term (±%.1f %%, from Tiznobaik & Shin's own "
+        "measured scatter) is combined in quadrature with an enhancement-transfer uncertainty of "
+        "±%.0f %% on cp and ±%.0f %% on k, so it widens the cp band by only ~%.1f %%. Particle "
+        "size is therefore **not** a material contributor to the uncertainty envelope — the "
+        "point of D6 is that d_p is now a *validated, range-guarded, separately-attributable* "
+        "input whose flat nominal is citable, not that the band moved."
+        % (100 * nfp.E_DP_REL_UNC, 100 * nfp.E_CP_REL_UNC, 100 * nfp.E_K_REL_UNC,
+           100 * ((rows[1][1]["cp"].hi - rows[1][1]["cp"].lo)
+                  / (ref["cp"].hi - ref["cp"].lo) - 1.0)))
+    say()
+    say("**Out-of-band behaviour.** A diameter outside %.0f–%.0f nm raises `ValueError` rather "
+        "than extrapolating, mirroring the ≤ %.1f wt%% loading guard. The declared sweep range "
+        "is a constraint of the study; a sweep that exceeds it would publish a size-invariance "
+        "claim over diameters nobody has measured."
+        % (nfp.D_P_MIN_NM, nfp.D_P_MAX_NM, nfp.HAN_PHI_MAX_WT))
+    say()
+    all_ok &= nominals_flat
     say("---")
     say()
     say("Generated by `scripts/report_htf_properties.py` at commit `%s`." % commit)

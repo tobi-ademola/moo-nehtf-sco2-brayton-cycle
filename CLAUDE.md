@@ -3,7 +3,11 @@
 > Read this before touching anything. It is written so a **fresh Code session or a brand-new
 > account** can run the pipeline cold with zero prior context. Companion to `MASTER_PLAN.md`.
 
-**Last updated:** 2026-08-15 — Session G (**the supervisor removed multi-objective optimisation
+**Last updated:** 2026-08-19 — Session H (**the last two blockers closed: the Southern Africa TMY
+is on disk (§5), and particle size `d_p` is represented as `DECISIONS.md` **D6**, a declared
+size-invariance over an evidenced band. The property module's source labels were also reconciled
+with `SOURCES.md` IDs — they had been silently pointing at the wrong papers**).
+Previously 2026-08-15 — Session G (**the supervisor removed multi-objective optimisation
 from the thesis; the objectives were reissued and the whole knowledge base realigned — see
 `MASTER_PLAN.md` §1 and `DECISIONS.md` D5**). Previously Session F: the UDPC blocker is cleared —
 the sweep converges at the full case F design in ~38 min; it was never over-constrained, only
@@ -26,12 +30,15 @@ session the operational difference is small but it changes what runs are worth l
 - **Cost is the binding constraint.** Anything touching the cycle or the HTF forces a **~35 min**
   UDPC map rebuild (§4.15); SM and t_TES do not. Partition the grid on that line and cache maps
   per cycle-design, or the campaign is unaffordable.
-- **ONE blocker remains, and it is a representation gap, not a missing file:** particle size `d_p`
-  is named as a swept parameter and is in **no model layer**, so a d_p sweep would return a flat
-  surface — a manufactured null result. `MASTER_PLAN.md` §10 has the three options; the choice must
-  be recorded in `DECISIONS.md` before any d_p sweep runs.
-  *(The second gap, the Southern Africa TMY, was closed 2026-08-19 — both Objective-5 sites are on
-  disk, §5.)*
+- **NO blockers remain.** Both gaps closed 2026-08-19: the Southern Africa TMY is on disk (§5), and
+  particle size `d_p` is represented as **`DECISIONS.md` D6 — a declared size-invariance over an
+  evidenced 5–60 nm band**, range-guarded, carrying a 6.1 % size-transfer uncertainty and **no
+  nominal trend**. ⚠ **A `d_p` sweep therefore returns a flat surface on purpose. That is the
+  finding, not a bug** — Tiznobaik & Shin 2013 (`SOURCES.md` B6) measured 5/10/30/60 nm and got
+  24/26/23/26 %, no trend over a 12× range. Do not "fix" it by adding a size correction; read D6
+  first, which records why an anchored correction is *unimplementable* (Han never reports its own
+  particle diameter). Sweep d_p at **low density** — it is a known null dimension in the nominal,
+  so run budget belongs on φ and the cycle variables. Passing d_p outside 5–60 nm **raises**.
 
 ---
 

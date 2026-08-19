@@ -66,7 +66,7 @@ HTF_CODE_USER_TABLE = 50    # user-defined 7-column property table
 NITRATE_T_HOT_C, NITRATE_T_COLD_C = 574.0, 290.0
 
 # Chloride operating window. The cold floor is set by the melt point plus a freeze margin;
-# the hot end is the top of the A1 correlation's stated validity (CLAUDE.md-independent -- it
+# the hot end is the top of the B0 correlation's stated validity (CLAUDE.md-independent -- it
 # comes from the property module's own T_VALID_MAX_C).
 FREEZE_MARGIN_K = 20.0
 CHLORIDE_T_COLD_C = 450.0
@@ -76,7 +76,7 @@ CHLORIDE_T_HOT_C = 700.0
 # off the end of the table; the too_narrow case below tests what happens when it does not.
 DEFAULT_T_GRID = [450.0, 500.0, 550.0, 600.0, 650.0, 700.0]
 
-PHI_REFERENCE = 0.007       # 0.7 wt% CuO -- Han/B3's measured cp optimum
+PHI_REFERENCE = 0.007       # 0.7 wt% CuO -- Han/B1's measured cp optimum
 
 # Column order/units of the 7-column table (CLAUDE.md §6). Repeated here so a shape error is
 # reported against a named column rather than an index.
@@ -140,7 +140,7 @@ def check_freeze_margin(T_cold_C):
     """The chloride's melt point is a hard floor on the cold tank, not a soft preference."""
     floor = nfp.MELTING_POINT_C + FREEZE_MARGIN_K
     return None if T_cold_C >= floor else (
-        f"T_cold = {T_cold_C:.1f} C is below the A1 melting point "
+        f"T_cold = {T_cold_C:.1f} C is below the B0 melting point "
         f"({nfp.MELTING_POINT_C:.1f} C) + {FREEZE_MARGIN_K:.0f} K freeze margin = {floor:.1f} C")
 
 
@@ -262,7 +262,7 @@ def case_table_too_narrow():
     needs a guard on its table span, so a failure here is a RESULT, not a bug.
 
     *** THIS CASE IS INCONCLUSIVE BY CONSTRUCTION, AND THAT IS THE FINDING. ***
-    Three of the four A1 correlations are EXACTLY LINEAR in T -- rho = 1958.8438 - 0.56355T,
+    Three of the four B0 correlations are EXACTLY LINEAR in T -- rho = 1958.8438 - 0.56355T,
     cp = 1301.38 - 0.5T, k = 0.5822 - 2.6e-4 T -- so linear interpolation on any grid, and
     linear extrapolation off either end, reproduces them to machine precision. Only mu
     (exponential) and h (quadratic in T) can differ at all. A bit-identical result to

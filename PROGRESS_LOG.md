@@ -1173,3 +1173,97 @@ comment sites in a validated module and belongs in its own commit, not one about
 `DECISIONS.md` — pull Han's particle size first. (c) Partition the decision vector by map-rebuild
 cost, then design the sweep grid — **now with both sites in view**, so the Objective-5 replication
 reuses the campaign. (d) Wire the exergy layer into the integrated model before the campaign starts.
+
+---
+
+## 2026-08-19 — Session H (continued): the `d_p` representation, decided and built
+
+**Task.** Pull Han's particle size, run the timeboxed option-(b) search, take the decision, build
+it, and reconcile the module's source labels with `SOURCES.md`. All five done. A `TODO.md` was
+added at the user's request as the live cross-session checklist (distinct from this append-only
+log and from `MASTER_PLAN.md` §11's strategic path).
+
+**1. Han's particle size: NOT RECOVERABLE.** Searched ScienceDirect (403, paywalled), OpenAlex
+(`is_oa: false`, no repository full text), Semantic Scholar (abstract carries no size), Academia.edu
+(403), and three reviews that tabulate the study — **none records the diameter**. This is a real
+finding, not a failed errand: it makes `MASTER_PLAN.md` §10 **option (a) unimplementable**, because
+an anchored size correction must be normalised so *f*(d_ref) = 1 at Han's own diameter and there is
+no d_ref to anchor at. Recovered instead, and worth having: Han's base-salt composition is
+**NaCl–KCl–MgCl₂ = 19.59 / 20.33 / 60.08 wt%**.
+
+**2. Option (b) search: NULL, and something better.** No study varies particle size for CuO in any
+chloride eutectic — consistent with `SOURCES.md` C0's headline about this corner of the literature.
+But the search surfaced **Tiznobaik & Shin 2013** (IJHMT 57:542–548, doi:10.1016/j.ijheatmasstransfer.2012.10.062,
+verified via Crossref; now `SOURCES.md` **B6**): **5 / 10 / 30 / 60 nm** SiO₂ at 1 wt% in a binary
+carbonate eutectic, giving cp enhancements of **24 / 26 / 23 / 26 %**. That is **no trend across a
+12× diameter range**, independently confirmed against a PMC open-access review and a second search.
+
+**3. This refutes the mechanism I had recommended the previous turn.** Specific surface area scales
+as 6/(ρ_p·d_p), so an interfacial-layer mechanism predicts enhancement ∝ 1/d_p — a 12× swing over
+exactly the range B6 measured flat. Shin's own group later attributed the enhancement to a
+**percolating salt nanostructure** whose length scale is set by the salt's self-assembly rather than
+the particle (`Appl. Phys. Lett.` 104 (2014); `IJHMT` 91:342–346 (2015)), which makes
+size-independence the *expected* result. **The surface-area argument is superseded by the same
+authors who originated the mechanism it rests on.** Recorded because the tempting move — build the
+1/d_p law anyway — is the one the evidence forbids.
+
+**4. Decision: `DECISIONS.md` D6 — option (c), selected by evidence, not taken as a fallback.**
+`d_p` is now a first-class, validated, **range-guarded** input whose **nominal effect is declared
+zero** over **5–60 nm**, carrying a **6.1 %** size-transfer uncertainty (`E_DP_REL_UNC`, taken from
+B6's own measured scatter). Out-of-band raises, mirroring the ≤ 2.0 wt% loading guard. `d_p = None`
+means "Han's fluid at Han's own diameter" and carries no penalty — which is also the backward
+compatibility path. **The two dead ends resolve each other:** a size *correction* needs an anchor and
+Han's diameter is unrecoverable; a declared *invariance* needs no anchor at all.
+
+**5. Built in `scripts/nanofluid_properties.py`**, with four assertions added to `validate()`:
+d_p=None reproduces pre-D6 bit-for-bit · nominal invariant 5→60 nm · band widens when a diameter is
+asserted · out-of-band raises. **All pass.** `scripts/report_htf_properties.py` gained §4, an audit
+table (identical nominals, wider bands) so the flat surface can be checked without reading code.
+
+**Regression evidence.** `results/htf_properties_20260819T111927Z.csv` is **byte-identical** to the
+2026-08-15 baseline, and `results/sam_htf_table_0p7wt.csv` is unchanged in git. **D6 changed no
+number** — it added a guard, a named uncertainty and a citation.
+
+⚠ **The honest magnitude caveat, recorded so nobody over-claims it.** 6.1 % in quadrature with the
+existing ±50 % (cp) and ±35 % (k) enhancement-transfer bands widens the cp band by only **~0.43 %**.
+Particle size is **not** a material contributor to the uncertainty envelope. What D6 buys is that a
+flat d_p surface is a transcribed measurement with a citation and a validity range — a **reported
+null, not a manufactured one** — not that the band moved.
+
+⚠ **Two weaknesses stated in D6 rather than hidden.** (i) The evidence is **not unanimous**: B5 (MgO
+in a different ternary chloride) reports cp *falling* with larger particle size — direction only, no
+transferable magnitude. (ii) **k is the weaker half**: B6 measured *specific heat*, and no
+molten-salt study resolves *thermal conductivity* against diameter at all, so k's size-invariance is
+an extension rather than a transcription. Flagged in `conductivity_nf()`'s docstring.
+
+**6. Source labels reconciled — the collision was worse than last session's note said.** The module
+used **three** local labels that resolved to the wrong papers in `SOURCES.md`: Han as "B3"
+(`SOURCES.md` B3 = Wang 2023), Shin & Banerjee as "B1" (B1 = Han 2022), and — not previously
+spotted — **the base salt as "A1", where `SOURCES.md` A1 is Dyreby's sCO₂ cycle paper**, an entirely
+unrelated work. All renamed to resolving IDs (B0 / B1 / D4) across
+`nanofluid_properties.py`, `report_htf_properties.py` and `htf_sam_bridge.py`. No number changed;
+the DOIs beside each label were always correct.
+
+**7. A genuine documentation gap this exposed.** The base-salt property paper — the source of
+**every φ = 0 number in the project** — had **no `SOURCES.md` entry at all**, so it was the one
+pivotal source the §J1 Crossref sweep never checked. Added as **B0**: Wang, Rincon, Li, Zhao &
+Vidal (2021), *J. Solar Energy Engineering* 143(4):041005, **doi:10.1115/1.4049253, verified via
+Crossref**. It was also mis-attributed as "Xu/Wang 2021" in `PROPERTIES.md` and both property
+scripts — **there is no Xu on the author list**; Xu is a different base-salt MD source (C3/C4).
+Corrected in the live files; pre-2026-08-19 `results/` artifacts keep the old attribution, being
+timestamped records.
+
+**Knowledge files updated:** `CLAUDE.md` (§0.1 — **no blockers remain**, plus an explicit warning
+that a flat d_p surface is intended and must not be "fixed"), `MASTER_PLAN.md` (header, §2 diagram,
+§1.1 table, §3 sweep-parameter table, §10 item closed, §11 item 3), `DECISIONS.md` (**D6 added**,
+D5 consequence 3 annotated, summary table), `SOURCES.md` (**B0 and B6 added**), `PROPERTIES.md`
+(particle-size position, base-salt attribution), `THESIS_SYNTHESIS.md` (decision-variable table,
+the gap note rewritten as a viva-facing answer, four status rows), `TODO.md` (new).
+
+**Next.** No representation blockers remain; the binding constraint is compute budget and grid
+design. (a) Partition the decision vector by map-rebuild cost — cycle variables force a ~35 min UDPC
+rebuild, SM and t_TES do not. (b) Wire the exergy layer into the integrated model *before* the
+campaign, or it must be re-run to collect Ė_D. (c) Run the Morris screening. (d) Design the sweep
+grid with **both TMY sites in view**, a φ = 0 control at every point, a declared T_hot floor — and
+**d_p at low density**, since D6 establishes it as a known null dimension in the nominal, so the run
+budget belongs on φ and the cycle variables.

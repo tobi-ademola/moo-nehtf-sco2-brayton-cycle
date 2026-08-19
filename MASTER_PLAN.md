@@ -5,7 +5,11 @@
 > **cold** by reading only this file plus the linked knowledge-base entries. Keep it
 > current. If you update nothing else, update this.
 
-**Last updated:** 2026-08-15 — Session G. ⚠ **OBJECTIVES REVISED BY THE SUPERVISOR — multi-objective
+**Last updated:** 2026-08-19 — Session H. **§10 is now clear: `d_p` closed as `DECISIONS.md` D6**
+(declared size-invariance over an evidenced 5–60 nm band), following the Southern Africa TMY
+closure earlier the same day. No representation blockers remain; the binding constraint is compute
+budget and grid design (§2).
+Previously 2026-08-15 — Session G. ⚠ **OBJECTIVES REVISED BY THE SUPERVISOR — multi-objective
 optimisation is REMOVED from scope** (flagged as post-graduate work). The new five objectives are in
 §1; what the change does to the critical path is in §2 and §11; the decision itself is recorded as
 `DECISIONS.md` **D5**. Everything already built and validated survives the change unaltered — only
@@ -65,7 +69,7 @@ in-scope deliverables, which is the single biggest consequence of the revision.
 | Role of Morris screening | prune the decision vector *for the optimiser* | **justify which axes the sweeps resolve finely and which are held**; a reported result in its own right |
 | Obj 4 / Obj 5 | post-defence | **in scope, on the critical path** |
 | Nano-vs-base comparison | one Pareto-front comparison at the end | **a continuous function over the whole swept envelope** — needs a base-salt (φ = 0) control run at *every* sweep point |
-| Particle size `d_p` | a decision variable the optimiser might have pruned | **explicitly named as a swept parameter** — no longer optional (§10) |
+| Particle size `d_p` | a decision variable the optimiser might have pruned | **explicitly named as a swept parameter** — no longer optional. ✅ Represented 2026-08-19 as a declared size-invariance (`DECISIONS.md` D6, §10) |
 | Thermal diffusivity α | implicit inside the k derivation | **explicitly named as a required property model** (§10) |
 | Everything validated so far | — | **unchanged.** No result, script, or baseline is invalidated. |
 
@@ -81,8 +85,8 @@ model rather than a search across it.
 ```
 [Obj1 properties]  ->  [Obj2 integrated model]  ->  [Obj3 validate + Morris]  ->  [Obj3 parametric sweeps]
         |                       |                            |                             |
-  DONE, +alpha & d_p       DELIVERED (annual              POWER BLOCK: PASSED          NOT STARTED
-  outstanding (§10)        result in hand, §11)          field/TES: baseline run       <-- now the
+  DONE - alpha & d_p       DELIVERED (annual              POWER BLOCK: PASSED          NOT STARTED
+  both closed (§10)        result in hand, §11)          field/TES: baseline run       <-- now the
                                                           (GUI check blocked,           critical path
                                                            not required)                     |
                                                                                              v
@@ -149,7 +153,7 @@ point 401.4 °C + margin); `system_capacity > 0`; Wnet ≥ min; Qloss,TES, Eannu
 | Named in Obj 3 | Variable | Implemented? |
 |---|---|---|
 | nanoparticle concentration | φ (#3) | ✅ 0–2.0 wt%, hard-capped by the property module |
-| **particle size** | **d_p (#4)** | ❌ **not represented in any model layer** — see §10 |
+| **particle size** | **d_p (#4)** | ✅ **represented as a declared size-invariance over 5–60 nm** (`DECISIONS.md` **D6**, 2026-08-19). Range-guarded input; contributes a 6.1 % uncertainty, **no nominal trend** — the flat surface is B6's measurement, not a gap. Sweep it at **low density**: it is a known null dimension in the nominal. |
 | cycle operating parameters | T_t,in, P_H, PR, f_RC (#7–#10) | ✅ all four exposed and validated at case F |
 
 ---
@@ -318,19 +322,23 @@ dominant. Strictly additive; it sharpens Stage 1, it does not gate Stage 2.
       and column layout as the Morocco file, so both sites read through one code path.
       **Both Objective-5 sites are now on disk and Obj 5 is unblocked on data.** See
       `CLAUDE.md` §5 for the pair and the one timezone caveat (UTC+0 vs UTC+2).
-- [ ] ⚠ **NEW, BLOCKING — `d_p` (particle size) is named in Objective 3 and is not represented in
-      any model layer.** The property module's enhancement fits are anchored to Han 2022 at a
-      **fixed** particle size and carry no size dependence, so a d_p sweep would currently move
-      nothing. This was an acceptable declared exclusion when d_p was one optimiser dimension
-      among ten; it is not acceptable when the objective names particle size as a swept parameter.
-      **Three honest options, and the choice must be recorded in `DECISIONS.md`:**
-      (a) build an analogue-grounded size correction from Wei et al. 2024 (`SOURCES.md` B5 — MgO in
-      a *different* ternary chloride, cp falls with larger particle size, 20 nm gives cp +38.2 %),
-      declared as an analogue exactly as the MD viscosity is;
-      (b) source a size-resolved anchor for CuO in NaCl–KCl–MgCl₂ specifically;
-      (c) sweep d_p only through the properties it *can* defensibly touch and declare the rest
-      size-invariant. **Do not sweep a variable the model cannot feel and report a flat response
-      surface as a finding** — that is a null result manufactured by the implementation.
+- [x] ✅ **CLOSED 2026-08-19 — `d_p` (particle size) is now represented.** Was blocking: the
+      enhancement fits are anchored to Han 2022 at a fixed particle size, so a d_p sweep moved
+      nothing and would have published a manufactured null. **Resolved as `DECISIONS.md` D6 —
+      option (c), selected by evidence rather than taken as a fallback.** How the other two died:
+      **(b) returned null** — no study varies particle size for CuO in any chloride eutectic;
+      **(a) proved unimplementable** — an anchored correction needs *f*(d_ref) = 1 at Han's own
+      diameter, and **Han 2022 does not report it in any accessible form** (paywalled, not open
+      access, absent from its abstract and from the reviews that tabulate it), so there is no
+      anchor point. Decisively, the mechanistic 1/d_p surface-area argument is **refuted**:
+      Tiznobaik & Shin 2013 (`SOURCES.md` **B6**) measured 5/10/30/60 nm SiO₂ and got
+      24/26/23/26 % — no trend across a **12× diameter range** where surface area predicts a 12×
+      swing. `d_p` is therefore a validated, range-guarded input with a **declared zero nominal
+      effect over 5–60 nm** and a 6.1 % size-transfer uncertainty. **The flat surface is now a
+      transcribed measurement with a citation, not an unrepresented variable** — which is the
+      whole distinction this item was raised to protect. ⚠ Two stated weaknesses live in D6: the
+      evidence is not unanimous (B5 reports cp falling with size in a chloride), and **no
+      molten-salt study resolves k against diameter at all**, so k is the weaker half.
 - [ ] ⚠ **NEW — thermal diffusivity α is now an explicitly required Objective-1 model.** It was
       already the *input* from which Han's k was derived (`scripts/nanofluid_properties.py`
       ~line 215) but was never an output. ✅ **Closed 2026-08-15** — α = k/(ρ·cp) is now a
@@ -381,8 +389,10 @@ Ordered. Each item blocks the ones below it. **Nothing in §12 competes with the
 3. **Close the two Objective-1/3 representation gaps** (§10) — cheap, and everything below inherits
    them:
    - ✅ **thermal diffusivity α** exposed by the property module (done 2026-08-15).
-   - ⚠️ **`d_p`** — pick option (a)/(b)/(c) from §10 and record it in `DECISIONS.md`. **Blocking for
-     Objective 3's particle-size sweep.**
+   - ✅ **`d_p`** — closed 2026-08-19 as `DECISIONS.md` **D6**: declared size-invariance over
+     5–60 nm, range-guarded, 6.1 % size-transfer uncertainty. **No longer blocking.** Sweep it at
+     low density — it is a known null dimension in the nominal, so run budget belongs on φ and the
+     cycle variables.
    - ✅ **Southern Africa TMY** — supplied 2026-08-19,
      `data/tmy/1292737_-28.27_23.38_tmy-2022.csv` (Northern Cape / Redstone corridor). **No
      longer blocking Objective 5.**

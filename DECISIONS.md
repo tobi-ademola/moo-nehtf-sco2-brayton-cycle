@@ -3,7 +3,10 @@
 > Per `MASTER_PLAN.md` §8. Atomic, self-contained entries — a new reader has zero context.
 > Each decision records: the question, the gating finding, the resolution, and the fallback.
 
-**Last updated:** 2026-08-15 — Session G. **D5 added: the supervisor removed multi-objective
+**Last updated:** 2026-08-19 — Session H. **D6 added: particle size `d_p` is represented as a
+declared size-invariance over an evidenced band**, which closes the last blocker in
+`MASTER_PLAN.md` §10. D5's consequence 3 is annotated accordingly.
+Previously 2026-08-15 — Session G. **D5 added: the supervisor removed multi-objective
 optimisation from scope.** D1 and D3 are annotated where the revision changes what they mean; their
 resolutions are unchanged. D2 and D4 are untouched by the revision.
 Previously 2026-08-12 — Session A (modeling-decision debate), which resolved the four debates
@@ -210,7 +213,10 @@ retain, do not delete, the MOO-related literature and reasoning as method contex
 3. **Two declared exclusions stop being acceptable.** `d_p` (particle size) is named as a swept
    parameter, and it is represented in no model layer; **thermal diffusivity** is named as a
    required property model, and was only ever an internal intermediate. Both are logged in
-   `MASTER_PLAN.md` §10; α is now closed, `d_p` is not.
+   `MASTER_PLAN.md` §10. ✅ **Both are now closed** — α on 2026-08-15 (derived, not fitted), and
+   `d_p` on 2026-08-19 by **D6** below. Kept in this record because the *lesson* stands: what is an
+   acceptable declared exclusion under an optimiser becomes a blocker under a sweep, because a
+   sweep reports across its whole declared range.
 4. **A missing data file became a blocker.** The Southern Africa (Upington) TMY was a post-defence
    footnote; Objective 5 cannot start without it. ✅ **Resolved 2026-08-19** — the user supplied
    `data/tmy/1292737_-28.27_23.38_tmy-2022.csv` (Northern Cape / Redstone corridor, 0.02° from the
@@ -228,6 +234,88 @@ it: the model, the metrics and the screening are exactly the inputs an optimiser
 
 ---
 
+## D6 — Particle size `d_p`: DECLARED SIZE-INVARIANT over an evidenced band (2026-08-19)
+
+**Question.** Objective 3 names particle size as a swept parameter. No layer of the model carries a
+length scale, so sweeping `d_p` today returns a perfectly flat response surface — which reads as
+the physical finding *"particle size does not matter"* and is not one. `MASTER_PLAN.md` §10 put
+three options on the table: **(a)** an analogue size correction from Wei 2024/B5, **(b)** source a
+size-resolved anchor for CuO in NaCl–KCl–MgCl₂, **(c)** declare size-invariance for what cannot be
+defensibly moved. Which one, and on what evidence?
+
+**Gating findings.** Three, gathered 2026-08-19; each eliminates or selects an option outright.
+
+1. **Option (b) returns NULL.** No study varies particle size for CuO in *any* chloride eutectic.
+   Consistent with `SOURCES.md` C0's headline that this corner of the literature is thin.
+
+2. **Option (a) is not implementable — not merely weak.** An anchored size correction must be
+   normalised so that *f*(d_ref) = 1 at the diameter Han's own cp/k series was measured at.
+   **Han 2022/B1 does not report that diameter in any accessible form**: the paper is paywalled
+   (OpenAlex `is_oa: false`, no repository full text), its abstract omits the size, and the reviews
+   that tabulate the study omit it too. Without d_ref there is no anchor point, so the correction
+   has nothing to be normalised against. Option (a) fails on a missing input, before any question
+   of whether a double analogue (different particle *and* different salt) would be defensible.
+
+3. **The mechanistic 1/d_p argument is refuted, not merely unsupported.** Specific surface area
+   scales as 6/(ρ_p·d_p), so the interfacial-layer mechanism (D4/Shin & Banerjee) naively predicts
+   enhancement ∝ 1/d_p — a **12× swing** across 5–60 nm. **Tiznobaik & Shin 2013** (`SOURCES.md`
+   **B6**) measured exactly that range: 5/10/30/60 nm SiO₂ at 1 wt% in a binary carbonate eutectic
+   gave cp enhancements of **24 / 26 / 23 / 26 %** — no trend, and a spread smaller than the
+   scatter. Shin's own group subsequently attributed the enhancement to a **percolating salt
+   nanostructure** whose length scale is set by the salt's self-assembly rather than by the
+   particle, which makes size-independence the mechanistically *expected* result. The surface-area
+   argument is superseded by the same authors who originated the mechanism it rests on.
+
+**Resolution.** **Option (c) — but as the option the evidence selects, not as the fallback it was
+written as.** `d_p` becomes a first-class model input that is validated and range-guarded, whose
+**nominal effect is declared zero** across an evidenced diameter band, and which contributes a
+**separately named size-transfer uncertainty**. Implemented in `scripts/nanofluid_properties.py`:
+
+| element | value | basis |
+|---|---|---|
+| `D_P_MIN_NM` / `D_P_MAX_NM` | **5 – 60 nm** | B6's tested range; outside it nothing is measured |
+| `E_DP_REL_UNC` | **6.1 %** | B6's *own measured scatter* (24/26/23/26 % about a 24.75 % mean) |
+| nominal ∂/∂d_p | **0, by decision** | B6 measured no trend over 12× diameter |
+| out-of-band `d_p` | **raises `ValueError`** | mirrors the ≤ 2.0 wt% loading guard |
+| `d_p = None` | no size penalty | "Han's fluid at Han's own diameter" — no transfer is claimed |
+
+**Why the two dead ends resolve each other.** A size *correction* needs an anchor and Han's
+diameter is unrecoverable; a declared *invariance* needs no anchor at all. The same missing number
+that kills option (a) is irrelevant to option (c) — which is why the search returning nothing is
+not a blocked outcome.
+
+**What this does and does not buy.** It does **not** materially widen the uncertainty envelope: 6.1 %
+in quadrature with the existing ±50 % (cp) and ±35 % (k) enhancement-transfer bands widens the cp
+band by ~0.4 %. Particle size is not a significant contributor to uncertainty and the record should
+say so. What it buys is that a flat `d_p` surface is now a **transcribed experimental result with a
+citation and a validity range**, not an unrepresented variable — the difference between a reported
+null and a manufactured one. `scripts/report_htf_properties.py` §4 emits the audit table.
+
+**Known weaknesses, stated.** Two, and neither is hidden by the implementation:
+
+- **The evidence is not unanimous.** B5 (MgO in a *different* ternary chloride) reports cp *falling*
+  with larger particle size — direction only, no transferable magnitude. One same-property study
+  says flat, one analogue says decreasing. That disagreement is what the uncertainty term is for;
+  it does not license inventing a nominal trend, which would assert more than either study supports.
+- **k is the weaker half.** B6 varied diameter against **specific heat**. *No* molten-salt study
+  resolves **thermal conductivity** against diameter. For k the size-invariant nominal is an
+  extension rather than a transcription — defensible, since Maxwell (the only theory available for
+  k) is a function of φ_v alone and cannot produce a size trend either, but it is the half to
+  revisit first. Flagged in `conductivity_nf()`'s docstring.
+
+**Fallback / what would overturn this.** A size-resolved cp or k series for any oxide in a ternary
+chloride, or recovery of Han's own particle diameter (which would let the declared invariance be
+*tested* rather than only declared). Either is one experiment or one full-text acquisition away;
+revisit D6 the day either exists. Until then the declared range is a **constraint of the study** —
+a `d_p` sweep must not exceed 5–60 nm, exactly as loading must not exceed 2.0 wt%.
+
+**Consequence for the sweep campaign.** `d_p` stays in the swept vector (Objective 3 names it), but
+it is now known in advance to be a **null dimension in the nominal**. Since it costs nothing in the
+property layer and forces no UDPC map rebuild, sweep it at low density — spend the run budget on
+φ and the cycle variables, which the same evidence base says are where the response lives.
+
+---
+
 ## Summary table
 
 | # | Decision | Resolution | Status |
@@ -237,3 +325,4 @@ it: the model, the metrics and the screening are exactly the inputs an optimiser
 | D3 | Screening | **Morris now; Sobol on survivors if time** | confirmed; purpose reframed by D5 (result + sweep design, not pruning) |
 | D4 | Validation | **Decoupled — forced by absence of sCO₂-tower case**; node-by-node power block, native-salt field/TES | confirmed & strengthened; now a stated requirement of Obj 3 |
 | D5 | **Multi-objective optimisation** | **REMOVED from scope by the supervisor; replaced by screening + parametric sweeps + benefit envelope + climate robustness** | **accepted 2026-08-15** |
+| D6 | **Particle size `d_p`** | **Declared size-invariant nominal over 5–60 nm**, with a 6.1 % size-transfer uncertainty and a hard range guard; option (c), selected by evidence (B6) after (a) proved unimplementable and (b) returned null | **accepted 2026-08-19**; closes the last §10 blocker |

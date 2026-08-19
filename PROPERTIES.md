@@ -12,6 +12,11 @@ each correlation", so the map below is what that requirement is discharged again
 status from an internal intermediate to a module output on 2026-08-15.
 
 **System:** CuO nanoparticles in ternary chloride eutectic **NaCl-KCl-MgCl2**.
+**Particle size:** declared **size-invariant over 5-60 nm** with a 6.1 % size-transfer uncertainty
+(`DECISIONS.md` **D6**, 2026-08-19; anchor `SOURCES.md` **B6**). The nominal carries no d_p trend
+*because Tiznobaik & Shin measured none across a 12x diameter range* -- not because the dependence
+is unmodelled. Out-of-band d_p raises. ⚠ The evidence is cp-only and from a carbonate/SiO2
+analogue; **no molten-salt study resolves k against diameter**, so k is the weaker half of D6.
 **Loadings characterized (prior work):** base + 3 loadings. Target T-range: ~700-800 C hot end.
 **Machine-readable evidence:** `scripts/report_htf_properties.py` → `results/htf_properties_*.{md,csv}`
 (provenance table + all five properties over 450–700 C + the α round-trip).
@@ -24,7 +29,7 @@ The five properties named by Objective 1, in its order.
 
 | Property | Trend to enforce | Primary anchor | Cross-check | Status |
 |---|---|---|---|---|
-| Density rho(T,phi) | rho down linear in T; up with phi | A1 set Table 9 (Xu/Wang 2021); CuO rho back-solved from Han 2022 Table 2 | Xu 2022 (solmat 111649); Han 2020; De Stefanis 2024 | anchored; volume-fraction convention diverges from Han's table **by design** and is disclosed |
+| Density rho(T,phi) | rho down linear in T; up with phi | B0 set Table 9 (Wang et al. 2021); CuO rho back-solved from Han 2022 Table 2 | Xu 2022 (solmat 111649); Han 2020; De Stefanis 2024 | anchored; volume-fraction convention diverges from Han's table **by design** and is disclosed |
 | Specific heat c_p(T,phi) | ~T-invariant at const P; up with phi, PEAKS at low phi | **Han 2022 (+10.51% @0.7wt%)** | Wang 2023 (opt 3wt%); Yang 2023 (peak ~1wt%) | anchored at 3 loadings; non-monotonic |
 | Thermal conductivity k(T,phi) | k down linear in T; up with phi | **Han 2022 (+15.85-39.55%)** | Lu 2021; Tian 2024 | anchored; 0.7 wt% point derived from Han's own alpha/rho/cp |
 | **Thermal diffusivity alpha(T,phi)** | up with phi and T | **DERIVED: alpha = k/(rho*cp)** — provenance inherited from its three constituents | **Han 2022 (+10.95-37.23%)**, the measured ratios k was back-derived from | ✅ **module OUTPUT since 2026-08-15**; round-trip closes to +0.65/+1.02/+4.01 % |
