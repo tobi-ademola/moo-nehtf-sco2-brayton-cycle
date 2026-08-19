@@ -47,6 +47,20 @@
 - [ ] **Implement the map cache, keyed by cycle design** — the costing above is only valid with
       it. Two grid points differing only in SM, t_TES, site or d_p share a map *exactly*; without
       a cache the campaign rebuilds identical maps and the 29.7 h becomes fiction.
+      > **Design constraint found while scoping it (2026-08-19), before writing any code.** The
+      > key must be **derived from the inputs actually applied to the model, not from a
+      > hand-maintained list of parameter names.** `build_udpc_map.build()` sets ~30 fields across
+      > `SystemDesign`, `Common` and `HeatExchangerDesign`, and several are pulled from
+      > `validate_dostal` (`ETA_MC`, `P_HIGH_MPA`, `F_RECOMP`, `DOSTAL_DP_FRAC`, …) — so a change
+      > to the validated baseline changes the map *without any argument of `build()` changing*.
+      > A key listing only `(phi, T_htf_hot, n_points)` would then serve a **stale map that looks
+      > right**, silently, which is the same failure family as §4.12's steam defaults. Hash the
+      > applied input set plus the ssc build string, and store the key beside the map so a cache
+      > hit can be audited. Also: `n_points` MUST be in the key — n=3 and n=5 gave +0.428 % on
+      > annual energy, so they are not interchangeable.
+      > ⚠ Verify the invariance claim rather than assuming it: confirm by execution that `d_p`
+      > and the site genuinely do not touch any field `build()` assigns, before letting the cache
+      > treat them as key-irrelevant.
 - [ ] **Run the Morris screening on the costed screening grid (8.8 h)** *before* spending map
       builds on the envelope — it tells you which map-class axes deserve levels.
 - [ ] **Wire the exergy layer into the integrated model** — every response functional is computable
