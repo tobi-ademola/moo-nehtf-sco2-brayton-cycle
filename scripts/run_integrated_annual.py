@@ -185,6 +185,16 @@ def build_case(name):
         info["power_block"] = "steam Rankine (SAM default)"
         info["map"] = None
         info["design_eff_used"] = float(m.SystemDesign.design_eff)
+        # STRIP TIER 1. design_magnitudes() always solves the sCO2 case F design point -- this
+        # case needs it for T_hot/T_cold (that identity is the whole point of the control), but
+        # its per-component exergy describes a cycle THIS CASE DOES NOT RUN. Left in, the report
+        # printed the sCO2 breakdown three times over, identical to the digit, under a steam
+        # heading: a number that looks like a result and is an artifact of where it was computed.
+        # Tier 2 is unaffected -- it is derived from this case's own hourly arrays.
+        for k in [k for k in info if k.startswith("ex_")]:
+            del info[k]
+        info["ex_tier1_note"] = ("not applicable -- tier 1 is the sCO2 cycle's per-component "
+                                 "exergy and this case runs SAM's steam Rankine block")
         return m, info
 
     n_points = int(name.split("_n")[1])
@@ -327,7 +337,7 @@ FIELDS = ("case", "status", "power_block", "map", "map_rows", "map_roundtrip_rel
           "ex_eta_II_cycle", "ex_Ed_total_kW", "ex_Ex_in_salt_kW", "ex_W_net_kW",
           "ex_largest_destroyer", "ex_largest_share_pct", "ex_balance_residual_rel",
           "ex_balance_closes", "ex_all_components_positive", "ex_cp_htf_kJ_kgK",
-          "ex_Ed_breakdown",
+          "ex_Ed_breakdown", "ex_tier1_note",
           "Ex_solar_MWh", "Ex_htf_to_cycle_MWh", "W_gross_MWh", "E_net_MWh",
           "Ed_power_block_MWh", "Ed_upstream_MWh", "eta_II_plant", "eta_II_power_block",
           "eta_II_collection", "petela_mean", "operating_hours", "negative_Ed_hours",
@@ -443,6 +453,8 @@ def main():
     say("TIER 1 -- DESIGN POINT, per component (from ssc's own h and s)")
     for r in rows:
         if r.get("ex_eta_II_cycle") is None:
+            if r.get("ex_tier1_note"):
+                say("   %s -- %s" % (r["case"], r["ex_tier1_note"]))
             continue
         say("   %s" % r["case"])
         say("      eta_II (cycle)     %.4f   = W_net %s kW / Ex_in(salt) %s kW"
