@@ -44,9 +44,14 @@
       tower-class, 1 free.** Target envelope costs **29.7 h** (30 maps + 960 tower runs), 64 % of
       it map building. The second site is **+21.9 %**, not +100 %; the φ = 0 control is **+25 %**,
       not +100 %.
-- [ ] **Implement the map cache, keyed by cycle design** — the costing above is only valid with
-      it. Two grid points differing only in SM, t_TES, site or d_p share a map *exactly*; without
-      a cache the campaign rebuilds identical maps and the 29.7 h becomes fiction.
+- [x] ~~**Implement the map cache, keyed by cycle design**~~ — done 2026-08-19,
+      `scripts/map_cache.py`, wired into `run_integrated_annual.py`. Key = SHA-256 over
+      `m.export()` (64 fields incl. `htf_props`) + PySAM version + ssc build string, computed
+      *before* `execute()` so a hit costs 0.1 s. `--verify-invariance` passes. ⚠ **Debt:** the two
+      existing maps were **adopted, not built** (`source: legacy-import`,
+      `verified_by_rebuild: false`) — a `--build --force` rebuild-and-diff is owed before any
+      final reported number, though not before a screening run.
+      *(Original note, kept because the reasoning is the design:)*
       > **Design constraint found while scoping it (2026-08-19), before writing any code.** The
       > key must be **derived from the inputs actually applied to the model, not from a
       > hand-maintained list of parameter names.** `build_udpc_map.build()` sets ~30 fields across

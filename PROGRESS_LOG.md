@@ -1363,3 +1363,55 @@ item 6, an extension rather than a defect. (b) Partition the decision vector by 
 (~35 min for cycle-touching variables, ~30 s for SM and t_TES) and design the sweep grid, with both
 TMY sites in view, a φ = 0 control at every point, a declared T_hot floor, and **d_p at low
 density** per D6. (c) Run the Morris screening.
+
+
+---
+
+## 2026-08-19 - Session H (continued): campaign infrastructure - grid costing and the map cache
+
+**1. Costed the campaign** (`scripts/design_sweep_grid.py` -> `results/sweep_grid_design_*`).
+Partition: **7 map-class** variables (each extra level costs 38 min x every other map axis),
+**2 tower-class** (SM, t_TES - 40 s against an existing map), **1 free** (d_p, no nominal effect
+by D6). Target envelope: **30 maps + 960 tower runs = 29.7 h**, of which **64 % is map building** -
+the 8760-hour annual sims that feel expensive are 36 %.
+
+Two results that intuition gets backwards, and both would have cost an objective:
+**the second site is +21.9 %, not +100 %** (a map is a property of the cycle design; the site
+enters only through the weather file), and **the phi = 0 control is +25 %, not +100 %** (it is a
+single fluid, so it collapses the phi axis to one level while keeping every other map axis).
+
+**2. Built the map cache** (`scripts/map_cache.py`), wired into `run_integrated_annual.py`.
+
+WARNING - **the near-miss worth recording.** The obvious key is the filename tag already in use,
+`(phi, T_htf_hot, n_points)`. It is **wrong in the silent direction**: `build()` pulls `ETA_MC`,
+`ETA_T`, `P_HIGH_MPA`, `F_RECOMP`, `DELTA_P_FRAC` and `DOSTAL_DP_FRAC` from `validate_dostal`, so
+**changing the validated baseline changes the map without any `build()` argument changing** - and
+a tag-keyed cache would serve a stale map that looks entirely right. Same family as 4.12.
+
+The key is therefore a SHA-256 over `m.export()`: **64 assigned fields** across five groups,
+including the 6x7 `htf_props` table (so phi is captured automatically). That is against the ~30 a
+careful reading of `build()` suggests - **a hand-maintained list would have missed roughly half**,
+including the `PHXDesign`/`AirCoolerDesign` defaults `build()` never sets. Computed **before**
+`execute()`, so a hit costs 0.1 s against 38 min. Environment identity confirmed:
+`ssc 306 / Windows 64 bit Visual C++ Apr 24 2026 01:21:21`, matching `CLAUDE.md` section 1 exactly.
+
+**Verified by execution (`--verify-invariance`), not asserted:** d_p moves no nominal property and
+leaves the HTF table identical; the key is reproducible across assemblies; and it *is* sensitive to
+phi, `n_points` and `T_htf_hot`. Sensitivity matters as much as invariance - n=3
+(`b45c75dc94e7f094`) and n=5 (`8d85dab5585b29bf`) differ by +0.428 % on annual energy and must not
+share an entry.
+
+**`resolve()` never builds, deliberately.** `spawn()` gives each case 900 s; a 38-min build inside
+one would be killed and reported as a crash - the exact "timeout mistaken for failure" mistake
+4.15 cost this project a session over. A miss raises with the explicit build command.
+
+WARNING - **the two existing maps were ADOPTED, not built.** Sidecars carry `source:
+legacy-import`, the file mtime and `verified_by_rebuild: false`, and the flag propagates to console
+and audit (`cache-hit(legacy-import, unverified)`). The adoption keys files against a design
+assembled *today* and cannot prove the design that produced them matches. **A `--build --force`
+rebuild-and-diff is owed before any final reported number** - not before a screening run.
+
+**Regression:** all three cases reproduce exactly through the cache - 440,206,500 / 442,092,058 /
+389,388,747 kWh, +13.05 % sCO2 vs steam, +0.428 % n=5 vs n=3, `negative_Ed_hours = 0`.
+
+**Next.** Morris screening; the receiver/TES/tank Ed split; then the envelope.
