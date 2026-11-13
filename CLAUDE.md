@@ -13,7 +13,7 @@ from the thesis; the objectives were reissued and the whole knowledge base reali
 the sweep converges at the full case F design in ~38 min; it was never over-constrained, only
 slower than every timeout used to test it (§4.15).
 **Machine:** Windows 11 Pro 10.0.26200, win32
-**Repo root:** `C:\Users\chukw\code\moo-nehtf-sco2-brayton-cycle`
+**Repo root:** `$HOME\code\moo-nehtf-sco2-brayton-cycle` (machine-independent; the user folder varies by machine)
 **⚠ The `moo-` in that path is legacy** — it stood for *multi-objective optimisation*, which is no
 longer in scope. The directory is deliberately **not** renamed (every absolute path in this file
 would break). Treat the name as historical.
@@ -129,7 +129,7 @@ The SAM installs are still needed, for three things only:
 PowerShell (primary shell on this machine):
 
 ```powershell
-cd C:\Users\chukw\code\moo-nehtf-sco2-brayton-cycle
+cd $HOME\code\moo-nehtf-sco2-brayton-cycle
 .\.venv\Scripts\python.exe -u .\scripts\your_script.py
 ```
 

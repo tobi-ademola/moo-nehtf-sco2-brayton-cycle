@@ -76,19 +76,19 @@ point, so the model's state table can be checked node-by-node against literature
 
 ## 2026-08-13 — Docs lane — Repo migrated to a new machine/user; stale-path cleanup + MENA weather file added
 
-**Goal.** `CLAUDE.md` was written on a machine where the repo lived at `C:\Users\meade\...`; this
-session is running from `C:\Users\chukw\code\moo-nehtf-sco2-brayton-cycle`. Fix stale paths before
+**Goal.** `CLAUDE.md` was written on a machine where the repo lived at `C:\Users\<user>\...`; this
+session is running from `C:\Users\<user>\code\moo-nehtf-sco2-brayton-cycle`. Fix stale paths before
 they mislead a future session, and resolve the "MENA site still needs downloading" TODO from §5.
 
 **What ran.** No scripts — documentation and file-organization only.
 
 **Findings and fixes.**
 
-1. `CLAUDE.md` repo-root header and the `cd` line in §2 said `C:\Users\meade\...`; corrected to
-   `C:\Users\chukw\code\moo-nehtf-sco2-brayton-cycle`. Repo-wide grep for `meade` (case-insensitive)
+1. `CLAUDE.md` repo-root header and the `cd` line in §2 said `C:\Users\<user>\...`; corrected to
+   `C:\Users\<user>\code\moo-nehtf-sco2-brayton-cycle`. Repo-wide grep for `meade` (case-insensitive)
    confirmed no other file references it.
-2. §5's Southern Africa TMY file (`C:\Users\meade\SAM Downloaded Weather Files\...`) does **not
-   exist** on this machine — checked under both `meade` and `chukw` user profiles, not found.
+2. §5's Southern Africa TMY file (`C:\Users\<user>\SAM Downloaded Weather Files\...`) does **not
+   exist** on this machine — checked under both user profiles on that machine, not found.
    Flagged in `CLAUDE.md` §5 as needing re-download; **not fixed this session**.
 3. User supplied a new NSRDB TMY file at repo root: `158192_31.05_-6.86_tmy-2022.csv` — lat 31.05,
    lon −6.86 (Ouarzazate region, Morocco). This fills the "MENA site still needs downloading" gap
@@ -1415,3 +1415,16 @@ rebuild-and-diff is owed before any final reported number** - not before a scree
 389,388,747 kWh, +13.05 % sCO2 vs steam, +0.428 % n=5 vs n=3, `negative_Ed_hours = 0`.
 
 **Next.** Morris screening; the receiver/TES/tank Ed split; then the envelope.
+
+---
+
+## 2026-11-13 — Public-release housekeeping (no scripts run)
+
+**Goal.** Prepare the repo to be made public for PhD applications.
+
+**Changes.** `README.md` rewritten as a portfolio-facing summary (results table, repo map, run
+steps). Machine-specific Windows user folders replaced: `CLAUDE.md` now gives the repo root as
+`$HOME\code\moo-nehtf-sco2-brayton-cycle`, and earlier `PROGRESS_LOG.md` entries show
+`C:\Users\<user>\...`. No result, script or baseline changed.
+
+**Next.** Unchanged from the previous entry.
